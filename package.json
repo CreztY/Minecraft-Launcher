@@ -1,0 +1,16 @@
+{
+  "name": "minecraft-launcher",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "CreztY",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^39.2.3"
+  }
+}
