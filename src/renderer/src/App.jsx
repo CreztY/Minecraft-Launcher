@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import Sidebar from './components/Sidebar'
 import ProgressBar from './components/ProgressBar'
 import HomeTab from './components/HomeTab'
@@ -9,11 +10,15 @@ import PlayButton from './components/PlayButton'
 import JavaPopup from './components/JavaPopup'
 import ForgePopup from './components/ForgePopup'
 import ModsProgress from './components/ModsProgress'
+import UpdateNotification from './components/UpdateNotification'
 import ModsDownloadPopup from './components/ModsDownloadPopup'
-import { FORGE_DOWNLOAD_URL, NEXTCLOUD_SHARE, NEWS } from '../../config'
+import RepairPopup from './components/RepairPopup'
+import ToastContainer from './components/ToastContainer'
+import { useToast } from './hooks/useToast'
+import { FORGE_DOWNLOAD_URL, MODS_SHARE, NEWS } from '../../config'
 
 function App() {
-  const maxMods = 24
+  const toast = useToast()
   const [activeTab, setActiveTab] = useState('home')
   const [javaInstalled, setJavaInstalled] = useState(null)
   const [javaVersion, setJavaVersion] = useState(null)
@@ -27,29 +32,31 @@ function App() {
   const [showJavaPopup, setShowJavaPopup] = useState(false)
   const [showForgePopup, setShowForgePopup] = useState(false)
   const [showModsPopup, setShowModsPopup] = useState(false)
+  const [showRepairPopup, setShowRepairPopup] = useState(false)
 
   // Configuración
   const [ramAllocation, setRamAllocation] = useState(12)
   const [maxRAM, setMaxRAM] = useState(32)
   const [graphicsLevel, setGraphicsLevel] = useState('normal')
+  const [shaderPreset, setShaderPreset] = useState('high')
   const [optionalMods, setOptionalMods] = useState({
     shaders: true,
     modpack: true,
     minimap: true,
     map: true
   })
+  const [modBlacklist, setModBlacklist] = useState([])
   const [isRamLoading, setIsRamLoading] = useState(true)
 
   // Noticias desde configuración
   const [news] = useState(NEWS)
 
-  const checkJava = async () => {
+  const checkJava = useCallback(async () => {
     try {
       // Llamada segura al main process expuesta por preload
       const javaInfo = await window.api.checkJava()
       setJavaInstalled(Boolean(javaInfo.installed && javaInfo.compatible))
       setJavaVersion(javaInfo.version)
-      // console.log('Java Info:', javaInfo)
 
       // Mostrar popup si no está instalado o no es compatible
       if (!javaInfo.installed || !javaInfo.compatible) {
@@ -64,57 +71,71 @@ function App() {
       setShowJavaPopup(true)
       return { installed: false, compatible: false, version: null }
     }
-  }
+  }, [])
 
-  const checkForgeVersion = async () => {
+  const checkForgeVersion = useCallback(async () => {
     try {
       const forgeInfo = await window.api.checkForgeVersion()
       setForgeStatus(forgeInfo.status)
       setForgeVersion(forgeInfo.version)
-      // console.log('Forge Info:', forgeInfo)
 
       // Mostrar popup si no está instalado o no es compatible
       if (!forgeInfo.compatible) {
         setShowForgePopup(true)
       } else {
         setShowForgePopup(false)
+        // Si Forge es compatible, asegurar que la RAM esté actualizada
+        const result = await window.api.updateLauncherProfile(ramAllocation)
+        if (!result.ok) {
+          toast.warning('No se pudo actualizar el perfil del launcher')
+        }
       }
 
       return forgeInfo
     } catch (error) {
       console.error('Error checking Forge:', error)
+      toast.error('Error al verificar Forge')
       return { status: 'notInstalled', compatible: false }
     }
-  }
+  }, [ramAllocation, toast])
 
-  const checkMods = async () => {
+  // Helper: Calcular cantidad de mods que necesitan descarga
+  const countModsNeedingDownload = useCallback((modsStatus) => {
+    if (!modsStatus) return 0
+    return (
+      (modsStatus.missing?.length || 0) +
+      (modsStatus.modified?.length || 0) +
+      (modsStatus.outdated?.length || 0) +
+      (modsStatus.corrupted?.length || 0)
+    )
+  }, [])
+
+  const checkMods = useCallback(async () => {
     try {
       const settings = {
         graphicsLevel,
         optionalMods,
-        ramAllocation
+        ramAllocation,
+        shaderPreset,
+        modBlacklist
       }
       const modsInfo = await window.api.checkMods(settings)
       setModsStatus(modsInfo)
-      console.log('Mods Info:', modsInfo)
 
       // Mostrar popup si hay mods faltantes, modificados, desactualizados o corruptos
-      const needsDownload =
-        (modsInfo.missing?.length || 0) +
-        (modsInfo.modified?.length || 0) +
-        (modsInfo.outdated?.length || 0) +
-        (modsInfo.corrupted?.length || 0)
-      if (needsDownload > 0) {
+      if (countModsNeedingDownload(modsInfo) > 0) {
         setShowModsPopup(true)
       }
 
       return modsInfo
     } catch (error) {
       console.error('Error checking mods:', error)
+      toast.error('Error al verificar mods')
       setModsStatus(null)
       return null
     }
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [graphicsLevel, optionalMods, ramAllocation, shaderPreset, modBlacklist])
 
   useEffect(() => {
     if (isRamLoading) return
@@ -128,7 +149,19 @@ function App() {
     }, 500)
 
     return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRamLoading])
+
+  // Auto-refresh mods when blacklist changes
+  useEffect(() => {
+    if (!isRamLoading) {
+      // Small delay to ensure settings are saved/propagated
+      const timer = setTimeout(() => {
+        checkMods()
+      }, 600)
+      return () => clearTimeout(timer)
+    }
+  }, [modBlacklist, checkMods, isRamLoading])
 
   // Escuchar eventos de progreso de descarga de mods enviados por el main
   useEffect(() => {
@@ -145,6 +178,9 @@ function App() {
           setProgress(100)
         } else {
           console.error('Download failed for', data.filename, data.error)
+          // Extraer solo el primer error para evitar mensajes repetitivos
+          const errorMsg = data.error?.split(',')[0]?.trim() || 'Error desconocido'
+          toast.error(`Error al descargar ${data.filename}: ${errorMsg}`)
         }
       } else if (data.type === 'delete-start') {
         setDownloadingMod({ id: data.id, filename: data.filename })
@@ -157,7 +193,6 @@ function App() {
         setIsDownloading(false)
         setDownloadingItem('')
         setDownloadingMod(null)
-        checkMods()
         setTimeout(() => setProgress(0), 1200)
       }
     })
@@ -165,6 +200,7 @@ function App() {
     return () => {
       if (typeof off === 'function') off()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -181,6 +217,8 @@ function App() {
         if (settings) {
           setRamAllocation(settings.ramAllocation || Math.min(12, systemRAM))
           setGraphicsLevel(settings.graphicsLevel || 'normal')
+          setShaderPreset(settings.shaderPreset || 'high')
+          setModBlacklist(settings.modBlacklist || [])
           setOptionalMods(
             settings.optionalMods || {
               shaders: true,
@@ -211,34 +249,34 @@ function App() {
   // Guardar configuración cuando cambie
   useEffect(() => {
     if (!isRamLoading) {
-      const settings = {
-        maxRAM, // 4. IMPORTANTE: Guardar también maxRAM
-        ramAllocation,
-        graphicsLevel,
-        optionalMods
-      }
-      console.log('Saving settings:', settings)
-      window.api.saveSettings(settings)
-    }
-  }, [ramAllocation, graphicsLevel, optionalMods, maxRAM, isRamLoading])
-
-  // Función para simular descarga
-  const simulateDownload = (item, duration = 3000) => {
-    setIsDownloading(true)
-    setDownloadingItem(item)
-    setProgress(0)
-
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          setIsDownloading(false)
-          return 100
+      const timeoutId = setTimeout(() => {
+        const settings = {
+          maxRAM,
+          ramAllocation,
+          graphicsLevel,
+          optionalMods,
+          shaderPreset,
+          modBlacklist
         }
-        return prev + 100 / (duration / 100)
-      })
-    }, 100)
-  }
+        window.api.saveSettings(settings)
+
+        if (forgeStatus === 'exact' || forgeStatus === 'acceptable') {
+          window.api.updateLauncherProfile(ramAllocation)
+        }
+      }, 500) // Esperar 500ms antes de guardar
+
+      return () => clearTimeout(timeoutId)
+    }
+  }, [
+    ramAllocation,
+    graphicsLevel,
+    optionalMods,
+    maxRAM,
+    isRamLoading,
+    forgeStatus,
+    shaderPreset,
+    modBlacklist
+  ])
 
   const handleDownloadJava = async () => {
     // Usar API segura expuesta por preload
@@ -262,75 +300,81 @@ function App() {
     setShowForgePopup(false)
   }
 
-  const handleDownloadMods = async () => {
-    if (!modsStatus) return
+  const getModsToProcess = useCallback((modsStatus, includeAll = true) => {
+    if (!modsStatus) return []
     const { missing = [], modified = [], outdated = [], corrupted = [] } = modsStatus
-    const toProcess = [...missing, ...modified, ...outdated, ...corrupted]
+    return includeAll
+      ? [...missing, ...modified, ...outdated, ...corrupted]
+      : [...outdated, ...corrupted]
+  }, [])
+  const prepareModsPayload = useCallback((mods, cleanInstall = false) => {
+    return mods.map((m) => ({
+      id: m.id,
+      filename: m.filename,
+      oldFilename: cleanInstall ? null : m.installedFilename || null,
+      installType: m.installType || 'mods'
+    }))
+  }, [])
+
+  const handleModsDownload = async (updateOnly = false) => {
+    const toProcess = getModsToProcess(modsStatus, !updateOnly)
     if (toProcess.length === 0) {
       setShowModsPopup(false)
       return
     }
 
-    // Preparar payload con posibles oldFilename para outdated/corrupted
-    const payload = toProcess.map((m) => ({
-      id: m.id,
-      filename: m.filename,
-      oldFilename: m.installedFilename || null,
-      installType: m.installType || 'mods'
-    }))
-
+    const payload = prepareModsPayload(toProcess)
     setShowModsPopup(false)
     setIsDownloading(true)
-    setDownloadingItem('Actualizando/Descargando mods')
+    setDownloadingItem(updateOnly ? 'Actualizando mods' : 'Actualizando/Descargando mods')
 
     try {
-      // Usar updateMods que borra antiguos si se pasan oldFilename y luego descarga
-      await window.api.updateMods(NEXTCLOUD_SHARE, payload)
+      await window.api.updateMods(MODS_SHARE, payload)
     } catch (error) {
       console.error('Error downloading/updating mods:', error)
+      toast.error('Error al descargar/actualizar mods')
       setIsDownloading(false)
       setDownloadingMod(null)
     }
   }
 
-  const handleUpdateMods = async () => {
-    if (!modsStatus) return
+  const handleDownloadMods = () => handleModsDownload(false)
+  const handleUpdateMods = () => handleModsDownload(true)
 
-    const { outdated = [], corrupted = [] } = modsStatus
-    const toUpdate = [...outdated, ...corrupted]
-    if (toUpdate.length === 0) {
-      setShowModsPopup(false)
-      return
-    }
-
-    // Preparar payload: incluir old filename y nueva filename para outdated + corrupted
-    const payload = toUpdate.map((m) => ({
-      id: m.id,
-      filename: m.filename, // nueva recomendada
-      oldFilename: m.installedFilename || m.filename || null,
-      installType: m.installType || 'mods'
-    }))
-
-    setShowModsPopup(false)
-    setIsDownloading(true)
-    setDownloadingItem('Actualizando mods')
-
+  const handleRepairInstallation = async () => {
     try {
-      await window.api.updateMods(NEXTCLOUD_SHARE, payload)
-      // El progreso y la finalización se gestionan por eventos desde el main
-    } catch (error) {
-      console.error('Error updating mods:', error)
-      setIsDownloading(false)
-    }
-  }
+      setIsDownloading(true)
+      setDownloadingItem('Reparando instalación...')
+      setProgress(0)
+      setShowRepairPopup(false)
 
-  const handleRepairInstallation = () => {
-    if (
-      confirm(
-        '¿Estás seguro de que quieres reparar la instalación? Esto volverá a descargar todos los archivos.'
-      )
-    ) {
-      simulateDownload('Reparando instalación', 5000)
+      // 1. Ejecutar limpieza en backend
+      await window.api.repairInstallation()
+
+      // 2. Verificar estado (Forge y Mods)
+      // Esto mostrará el popup de Forge si falta
+      await checkForgeVersion()
+
+      // Obtener estado actualizado de mods (deberían faltar todos)
+      const modsInfo = await checkMods()
+
+      if (modsInfo) {
+        const toProcess = getModsToProcess(modsInfo)
+        if (toProcess.length > 0) {
+          setDownloadingItem('Descargando mods...')
+          const payload = prepareModsPayload(toProcess, true) // Instalación limpia
+          await window.api.updateMods(MODS_SHARE, payload)
+        }
+      }
+
+      setIsDownloading(false)
+      setDownloadingItem('')
+      setProgress(0)
+    } catch (error) {
+      console.error('Error repairing installation:', error)
+      toast.error(`Error al reparar instalación: ${error.message}`)
+      setIsDownloading(false)
+      setDownloadingItem('')
     }
   }
 
@@ -344,7 +388,6 @@ function App() {
 
     // Verificar Forge
     const forgeInfo = await checkForgeVersion()
-    // console.log('Forge Info on Play:', forgeInfo)
     if (!forgeInfo.compatible) {
       setShowForgePopup(true)
       return
@@ -352,21 +395,16 @@ function App() {
 
     // Verificar Mods
     const modsInfo = await checkMods()
-    const needsDownload =
-      (modsInfo?.missing?.length || 0) +
-      (modsInfo?.modified?.length || 0) +
-      (modsInfo?.outdated?.length || 0) +
-      (modsInfo?.corrupted?.length || 0)
-    if (needsDownload > 0) {
+    if (countModsNeedingDownload(modsInfo) > 0) {
       setShowModsPopup(true)
       return
     }
 
     // Todo OK - iniciar juego
-    if (confirm('Ya esta todo listo. Ahora inicia el juego y comienza el juego!')) {
-      // Cerrar la app
+    toast.success('¡Todo listo! Iniciando Minecraft...')
+    setTimeout(() => {
       window.api.exitApp()
-    }
+    }, 1000)
   }
 
   if (isRamLoading) {
@@ -387,7 +425,6 @@ function App() {
         forgeStatus={forgeStatus}
         forgeVersion={forgeVersion}
         modsStatus={modsStatus}
-        maxMods={maxMods}
       />
 
       {/* Main Content */}
@@ -400,37 +437,86 @@ function App() {
 
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-8">
-          {activeTab === 'home' && (
-            <div className="space-y-6">
-              <HomeTab
-                ramAllocation={ramAllocation}
-                news={news}
-                istalledMods={modsStatus?.totalInstalled || 'N/A'}
-              />
-              {modsStatus && (
-                <ModsProgress
-                  isDownloading={isDownloading}
-                  modsStatus={modsStatus}
-                  progress={progress}
-                  downloadingMod={downloadingMod}
+          <AnimatePresence mode="wait">
+            {activeTab === 'home' && (
+              <motion.div
+                key="home"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-6"
+              >
+                <HomeTab
+                  ramAllocation={ramAllocation}
+                  news={news}
+                  installedMods={modsStatus?.totalInstalled || 'N/A'}
                 />
-              )}
-            </div>
-          )}
-          {activeTab === 'news' && <NewsTab news={news} />}
-          {activeTab === 'info' && <InfoTab />}
-          {activeTab === 'settings' && (
-            <SettingsTab
-              maxRAM={maxRAM}
-              ramAllocation={ramAllocation}
-              setRamAllocation={setRamAllocation}
-              graphicsLevel={graphicsLevel}
-              setGraphicsLevel={setGraphicsLevel}
-              optionalMods={optionalMods}
-              setOptionalMods={setOptionalMods}
-              handleRepairInstallation={handleRepairInstallation}
-            />
-          )}
+                {modsStatus && (
+                  <ModsProgress
+                    isDownloading={isDownloading}
+                    modsStatus={modsStatus}
+                    progress={progress}
+                    downloadingMod={downloadingMod}
+                    modBlacklist={modBlacklist}
+                    updateBlacklist={setModBlacklist}
+                    onRefreshMods={checkMods}
+                    onToast={toast}
+                  />
+                )}
+              </motion.div>
+            )}
+            {activeTab === 'news' && (
+              <motion.div
+                key="news"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.2 }}
+              >
+                <NewsTab news={news} />
+              </motion.div>
+            )}
+            {activeTab === 'info' && (
+              <motion.div
+                key="info"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.2 }}
+              >
+                <InfoTab
+                  modsStatus={modsStatus}
+                  modBlacklist={modBlacklist}
+                  updateBlacklist={setModBlacklist}
+                  onRefreshMods={checkMods}
+                  onToast={toast}
+                />
+              </motion.div>
+            )}
+            {activeTab === 'settings' && (
+              <motion.div
+                key="settings"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.2 }}
+              >
+                <SettingsTab
+                  maxRAM={maxRAM}
+                  ramAllocation={ramAllocation}
+                  setRamAllocation={setRamAllocation}
+                  graphicsLevel={graphicsLevel}
+                  setGraphicsLevel={setGraphicsLevel}
+                  shaderPreset={shaderPreset}
+                  setShaderPreset={setShaderPreset}
+                  optionalMods={optionalMods}
+                  setOptionalMods={setOptionalMods}
+                  setShowRepairPopup={setShowRepairPopup}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         <PlayButton isDownloading={isDownloading} handlePlay={handlePlay} />
@@ -454,6 +540,13 @@ function App() {
         isDownloading={isDownloading}
         showModsPopup={showModsPopup}
       />
+      <RepairPopup
+        showRepairPopup={showRepairPopup}
+        setShowRepairPopup={setShowRepairPopup}
+        handleRepair={handleRepairInstallation}
+      />
+      <ToastContainer />
+      <UpdateNotification onToast={toast} />
     </div>
   )
 }

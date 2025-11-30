@@ -2,6 +2,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'fs'
 import { join } from 'path'
 import crypto from 'crypto'
 import { RECOMMENDED_MODS, getRecommendedMods } from '../config'
+import { getMinecraftPath, getPathForInstallType } from './utils/paths.js'
 
 /**
  * Calcula hash SHA256 de un archivo
@@ -116,15 +117,8 @@ export async function checkMods(settings = {}) {
 
     // Obtener lista de mods recomendados según settings
     const MODS_TO_CHECK = getRecommendedMods(settings)
-    // Rutas base (para información y fallback)
-    let modsDir = null
-    if (process.platform === 'win32') {
-      modsDir = join(process.env.APPDATA || '', '.minecraft', 'mods')
-    } else if (process.platform === 'darwin') {
-      modsDir = join(process.env.HOME || '', 'Library/Application Support/minecraft/mods')
-    } else if (process.platform === 'linux') {
-      modsDir = join(process.env.HOME || '', '.minecraft/mods')
-    }
+    const modsDir = getMinecraftPath('mods')
+    const modBlacklist = settings.modBlacklist || []
 
     console.log('Checking directories. Mods base dir:', modsDir)
     const installed = []
@@ -132,33 +126,19 @@ export async function checkMods(settings = {}) {
     const corrupted = []
     const modified = []
     const outdated = []
+    const omitted = []
 
     // Verificar cada mod recomendado, teniendo en cuenta su tipo de instalación
     for (const recommendedMod of MODS_TO_CHECK) {
-      const installType = recommendedMod.installType || 'mods'
-      // Determinar carpeta objetivo según tipo
-      let targetDir = modsDir
-      if (installType === 'shaderpack') {
-        if (process.platform === 'win32')
-          targetDir = join(process.env.APPDATA || '', '.minecraft', 'shaderpacks')
-        else if (process.platform === 'darwin')
-          targetDir = join(
-            process.env.HOME || '',
-            'Library/Application Support/minecraft',
-            'shaderpacks'
-          )
-        else targetDir = join(process.env.HOME || '', '.minecraft/shaderpacks')
-      } else if (installType === 'resourcepack') {
-        if (process.platform === 'win32')
-          targetDir = join(process.env.APPDATA || '', '.minecraft', 'resourcepacks')
-        else if (process.platform === 'darwin')
-          targetDir = join(
-            process.env.HOME || '',
-            'Library/Application Support/minecraft',
-            'resourcepacks'
-          )
-        else targetDir = join(process.env.HOME || '', '.minecraft/resourcepacks')
+      // Si está en blacklist, lo marcamos como omitido y saltamos verificación
+      if (modBlacklist.includes(recommendedMod.id)) {
+        omitted.push(recommendedMod)
+        console.log(`Mod omitted (blacklisted): ${recommendedMod.name}`)
+        continue
       }
+
+      const installType = recommendedMod.installType || 'mods'
+      const targetDir = getPathForInstallType(installType)
 
       const extCheck =
         installType === 'shaderpack' || installType === 'resourcepack'
@@ -267,10 +247,12 @@ export async function checkMods(settings = {}) {
       corrupted,
       modified,
       outdated,
+      omitted,
       modsDir,
       totalExpected: MODS_TO_CHECK.length,
       totalInstalled: installed.length,
-      totalMissing: missing.length
+      totalMissing: missing.length,
+      totalOmitted: omitted.length
     }
   } catch (error) {
     console.error('Error checking mods:', error)
@@ -280,6 +262,7 @@ export async function checkMods(settings = {}) {
       corrupted: [],
       modified: [],
       outdated: [],
+      omitted: [],
       modsDir: null
     }
   }

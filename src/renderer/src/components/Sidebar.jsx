@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types'
+import { motion } from 'framer-motion'
 import { Settings, PlayCircle, Info, AlertTriangle, X } from 'lucide-react'
 import { AlertCircle, Check } from 'lucide-react'
 import logobg from '../assets/logobg.png'
@@ -10,8 +11,7 @@ Sidebar.propTypes = {
   javaVersion: PropTypes.string,
   forgeStatus: PropTypes.oneOf(['exact', 'acceptable', 'notInstalled']),
   forgeVersion: PropTypes.string,
-  modsStatus: PropTypes.object,
-  maxMods: PropTypes.number
+  modsStatus: PropTypes.object
 }
 
 function Sidebar({
@@ -21,8 +21,7 @@ function Sidebar({
   javaVersion,
   forgeStatus,
   forgeVersion,
-  modsStatus,
-  maxMods
+  modsStatus
 }) {
   return (
     <div className="w-64 bg-gray-900/50 backdrop-blur border-r border-gray-700 flex flex-col">
@@ -32,49 +31,74 @@ function Sidebar({
       </div>
 
       <nav className="flex-1 p-4 space-y-2">
-        <button
+        <motion.button
+          whileHover={{ scale: 1.02, x: 5 }}
+          whileTap={{ scale: 0.98 }}
           onClick={() => setActiveTab('home')}
-          className={`w-full px-4 py-3 rounded-lg text-left transition-all ${
-            activeTab === 'home'
-              ? 'bg-green-600 text-white shadow-lg'
-              : 'hover:bg-gray-800 text-gray-300'
-          }`}
+          className={`w-full px-4 py-3 rounded-lg text-left transition-colors relative ${activeTab === 'home' ? 'text-white' : 'hover:bg-gray-800 text-gray-300'
+            }`}
         >
-          <PlayCircle className="inline mr-2" size={18} />
-          Inicio
-        </button>
-        <button
+          {activeTab === 'home' && (
+            <motion.div
+              layoutId="activeTab"
+              className="absolute inset-0 bg-green-600 rounded-lg shadow-lg -z-10"
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            />
+          )}
+          <PlayCircle className="inline mr-2 relative z-10" size={18} />
+          <span className="relative z-10">Inicio</span>
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.02, x: 5 }}
+          whileTap={{ scale: 0.98 }}
           onClick={() => setActiveTab('news')}
-          className={`w-full px-4 py-3 rounded-lg text-left transition-all ${
-            activeTab === 'news'
-              ? 'bg-green-600 text-white shadow-lg'
-              : 'hover:bg-gray-800 text-gray-300'
-          }`}
+          className={`w-full px-4 py-3 rounded-lg text-left transition-colors relative ${activeTab === 'news' ? 'text-white' : 'hover:bg-gray-800 text-gray-300'
+            }`}
         >
-          📰 Noticias
-        </button>
-        <button
+          {activeTab === 'news' && (
+            <motion.div
+              layoutId="activeTab"
+              className="absolute inset-0 bg-green-600 rounded-lg shadow-lg -z-10"
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            />
+          )}
+          <span className="relative z-10 mr-2">📰</span>
+          <span className="relative z-10">Noticias</span>
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.02, x: 5 }}
+          whileTap={{ scale: 0.98 }}
           onClick={() => setActiveTab('info')}
-          className={`w-full px-4 py-3 rounded-lg text-left transition-all ${
-            activeTab === 'info'
-              ? 'bg-green-600 text-white shadow-lg'
-              : 'hover:bg-gray-800 text-gray-300'
-          }`}
+          className={`w-full px-4 py-3 rounded-lg text-left transition-colors relative ${activeTab === 'info' ? 'text-white' : 'hover:bg-gray-800 text-gray-300'
+            }`}
         >
-          <Info className="inline mr-2" size={18} />
-          Información
-        </button>
-        <button
+          {activeTab === 'info' && (
+            <motion.div
+              layoutId="activeTab"
+              className="absolute inset-0 bg-green-600 rounded-lg shadow-lg -z-10"
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            />
+          )}
+          <Info className="inline mr-2 relative z-10" size={18} />
+          <span className="relative z-10">Información</span>
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.02, x: 5 }}
+          whileTap={{ scale: 0.98 }}
           onClick={() => setActiveTab('settings')}
-          className={`w-full px-4 py-3 rounded-lg text-left transition-all ${
-            activeTab === 'settings'
-              ? 'bg-green-600 text-white shadow-lg'
-              : 'hover:bg-gray-800 text-gray-300'
-          }`}
+          className={`w-full px-4 py-3 rounded-lg text-left transition-colors relative ${activeTab === 'settings' ? 'text-white' : 'hover:bg-gray-800 text-gray-300'
+            }`}
         >
-          <Settings className="inline mr-2" size={18} />
-          Configuración
-        </button>
+          {activeTab === 'settings' && (
+            <motion.div
+              layoutId="activeTab"
+              className="absolute inset-0 bg-green-600 rounded-lg shadow-lg -z-10"
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            />
+          )}
+          <Settings className="inline mr-2 relative z-10" size={18} />
+          <span className="relative z-10">Configuración</span>
+        </motion.button>
       </nav>
 
       {/* System Status */}
@@ -126,7 +150,13 @@ function Sidebar({
           ) : modsStatus.totalInstalled === undefined ? (
             <span className="text-yellow-400">No instalados</span>
           ) : (
-            <span className={modsStatus.totalInstalled === modsStatus.totalExpected ? 'text-green-400' : 'text-yellow-400'}>
+            <span
+              className={
+                modsStatus.totalInstalled === modsStatus.totalExpected
+                  ? 'text-green-400'
+                  : 'text-yellow-400'
+              }
+            >
               {modsStatus.totalInstalled}/{modsStatus.totalExpected}
             </span>
           )}

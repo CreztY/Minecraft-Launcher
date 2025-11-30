@@ -1,20 +1,91 @@
-import { Server, Package, Users, Signal } from 'lucide-react'
-import { MODS_LIST } from '../../../config'
+import { useState, useEffect } from 'react'
+import PropTypes from 'prop-types'
+import {
+  Server,
+  Package,
+  Users,
+  Signal,
+  Shield,
+  Zap,
+  Heart,
+  MapPin,
+  XCircle,
+  Loader
+} from 'lucide-react'
+import ModsStatus from './ModsStatus'
 
-function InfoTab() {
-  const mods = MODS_LIST
+InfoTab.propTypes = {
+  modsStatus: PropTypes.object,
+  modBlacklist: PropTypes.array,
+  updateBlacklist: PropTypes.func,
+  onRefreshMods: PropTypes.func,
+  onToast: PropTypes.object
+}
 
-  const serverInfo = {
-    name: 'SoulCraft Server',
-    ip: 'hub.crezty.com',
-    port: 25566,
-    version: '1.20.1',
-    players: 12,
-    maxPlayers: 50,
-    uptime: '15d 4h 32m',
-    tps: 19.8,
-    difficulty: 'Hard'
-  }
+function InfoTab({ modsStatus, modBlacklist, updateBlacklist, onRefreshMods, onToast }) {
+  console.log('[InfoTab] Props received:', {
+    hasModsStatus: !!modsStatus,
+    modBlacklist,
+    hasUpdateBlacklist: typeof updateBlacklist === 'function',
+    hasOnToast: !!onToast
+  })
+  const [serverStatus, setServerStatus] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  const SERVER_IP = 'hub.crezty.com'
+  const SERVER_PORT = 25566
+
+  useEffect(() => {
+    const fetchServerStatus = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+
+        // Usar IPC handler en lugar de fetch directo para evitar CSP
+        const response = await window.api.fetchServerStatus(SERVER_IP, SERVER_PORT)
+
+        if (response.ok && response.data.online) {
+          const data = response.data
+          setServerStatus({
+            online: true,
+            players: data.players?.online || 0,
+            maxPlayers: data.players?.max || 0,
+            version: data.version || '1.20.1',
+            motd: data.motd?.clean?.[0] || 'SoulCraft Server'
+          })
+        } else {
+          setServerStatus({ online: false })
+        }
+      } catch (err) {
+        console.error('Error fetching server status:', err)
+        setError('No se pudo conectar al servidor')
+        setServerStatus({ online: false })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchServerStatus()
+    // Actualizar cada 30 segundos
+    const interval = setInterval(fetchServerStatus, 30000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const serverFeatures = [
+    { icon: Shield, title: 'Protección Anti-Griefing', desc: 'Tu construcción está 100% segura' },
+    { icon: Zap, title: 'Servidor 24/7', desc: 'Disponible siempre que quieras jugar' },
+    { icon: Heart, title: 'Comunidad Activa', desc: 'Jugadores amigables y activos' },
+    { icon: MapPin, title: 'Mundo Infinito', desc: 'Explora sin límites' }
+  ]
+
+  const serverRules = [
+    'Respeta a todos los jugadores',
+    'No hacer griefing ni robar',
+    'No usar hacks o mods prohibidos',
+    'No spam en el chat',
+    'Reporta bugs al staff'
+  ]
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -22,38 +93,59 @@ function InfoTab() {
 
       {/* Server Status Card */}
       <div className="bg-linear-to-r from-blue-900/30 to-cyan-900/30 rounded-xl p-6 border border-blue-700/50">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="flex items-center space-x-3">
-            <Server className="text-cyan-400" size={24} />
-            <div>
-              <p className="text-xs text-gray-400">Servidor</p>
-              <p className="font-bold text-cyan-400">{serverInfo.name}</p>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader className="animate-spin text-cyan-400 mr-2" size={24} />
+            <span className="text-gray-300">Consultando estado del servidor...</span>
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center py-8 text-red-400">
+            <XCircle className="mr-2" size={24} />
+            <span>{error}</span>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="flex items-center space-x-3">
+              <Server
+                className={serverStatus?.online ? 'text-green-400' : 'text-red-400'}
+                size={24}
+              />
+              <div>
+                <p className="text-xs text-gray-400">Estado</p>
+                <p
+                  className={`font-bold ${serverStatus?.online ? 'text-green-400' : 'text-red-400'}`}
+                >
+                  {serverStatus?.online ? 'Online' : 'Offline'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Users className="text-cyan-400" size={24} />
+              <div>
+                <p className="text-xs text-gray-400">Jugadores</p>
+                <p className="font-bold text-cyan-400">
+                  {serverStatus?.online
+                    ? `${serverStatus.players}/${serverStatus.maxPlayers}`
+                    : 'N/A'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Package className="text-purple-400" size={24} />
+              <div>
+                <p className="text-xs text-gray-400">Versión</p>
+                <p className="font-bold text-purple-400">{serverStatus?.version || '1.20.1'}</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Signal className="text-yellow-400" size={24} />
+              <div>
+                <p className="text-xs text-gray-400">Latencia</p>
+                <p className="font-bold text-green-400">{serverStatus?.online ? 'Buena' : 'N/A'}</p>
+              </div>
             </div>
           </div>
-          <div className="flex items-center space-x-3">
-            <Users className="text-green-400" size={24} />
-            <div>
-              <p className="text-xs text-gray-400">Jugadores</p>
-              <p className="font-bold text-green-400">
-                {serverInfo.players}/{serverInfo.maxPlayers}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-3">
-            <Signal className="text-yellow-400" size={24} />
-            <div>
-              <p className="text-xs text-gray-400">TPS</p>
-              <p className="font-bold text-yellow-400">{serverInfo.tps}</p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-3">
-            <Package className="text-purple-400" size={24} />
-            <div>
-              <p className="text-xs text-gray-400">Versión</p>
-              <p className="font-bold text-purple-400">{serverInfo.version}</p>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Server Details */}
@@ -63,19 +155,21 @@ function InfoTab() {
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="text-gray-400">IP del Servidor:</span>
-              <span className="font-mono text-cyan-400">{serverInfo.ip}</span>
+              <span className="font-mono text-cyan-400">{SERVER_IP}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">Puerto:</span>
-              <span className="font-mono text-cyan-400">{serverInfo.port}</span>
+              <span className="font-mono text-cyan-400">{SERVER_PORT}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Dificultad:</span>
-              <span className="font-mono text-orange-400">{serverInfo.difficulty}</span>
+              <span className="text-gray-400">Versión:</span>
+              <span className="font-mono text-purple-400">{serverStatus?.version || '1.20.1'}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Tiempo activo:</span>
-              <span className="font-mono text-purple-400">{serverInfo.uptime}</span>
+              <span className="text-gray-400">MOTD:</span>
+              <span className="font-mono text-green-400 text-sm">
+                {serverStatus?.motd || 'SoulCraft'}
+              </span>
             </div>
           </div>
         </div>
@@ -84,47 +178,60 @@ function InfoTab() {
           <h3 className="text-xl font-bold mb-4 text-green-400">Cómo Conectarse</h3>
           <div className="space-y-3">
             <p className="text-sm text-gray-300">
-              jugar en nuestro servidor es extremadamente fácil
+              Jugar en nuestro servidor es extremadamente fácil
             </p>
             <p className="text-sm text-gray-300">
-              solamente tendras que pulsar el boton de jugar dentro del juego
+              Solamente tendrás que pulsar el botón de jugar dentro del launcher
             </p>
+            <div className="mt-4 p-3 bg-gray-900/50 rounded border border-gray-700">
+              <p className="text-xs text-gray-400 mb-1">Comando directo:</p>
+              <code className="text-cyan-400 text-sm">
+                /connect {SERVER_IP}:{SERVER_PORT}
+              </code>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Mods List */}
+      {/* Server Features */}
       <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-        <div className="mt-4 p-3 bg-gray-900/50 rounded-lg border border-gray-700">
-          <p className="text-sm text-gray-300">
-            💡 <span className="text-gray-400">Total de mods instalados:</span>{' '}
-            <span className="text-green-400 font-bold">{mods.length}</span>
-          </p>
-        </div>
-
-        <h3 className="text-xl font-bold my-4 flex items-center">
-          <Package className="mr-2 text-green-400" size={24} />
-          Lista de Mods Instalados ({mods.length})
-        </h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {mods.map((mod) => (
+        <h3 className="text-xl font-bold mb-4 text-cyan-400">Características del Servidor</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {serverFeatures.map((feature, index) => (
             <div
-              key={mod.id}
-              className="bg-gray-900/50 rounded-lg p-4 border border-gray-700 hover:border-green-600/50 transition-colors"
+              key={index}
+              className="bg-gray-900/50 rounded-lg p-4 border border-gray-700 hover:border-cyan-600/50 transition-colors"
             >
-              <div className="flex justify-between items-start mb-2">
-                <h4 className="font-bold text-green-400 text-sm">{mod.name}</h4>
-                <span className="text-xs bg-gray-700 px-2 py-1 rounded text-gray-300">
-                  {mod.version}
-                </span>
-              </div>
-              <p className="text-xs text-gray-400">
-                <span className="text-purple-400 font-semibold">{mod.category}</span>
-              </p>
+              <feature.icon className="text-cyan-400 mb-2" size={24} />
+              <h4 className="font-bold text-white mb-1">{feature.title}</h4>
+              <p className="text-sm text-gray-400">{feature.desc}</p>
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Server Rules */}
+      <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
+        <h3 className="text-xl font-bold mb-4 text-yellow-400">Reglas del Servidor</h3>
+        <ul className="space-y-2">
+          {serverRules.map((rule, index) => (
+            <li key={index} className="flex items-start">
+              <span className="text-yellow-400 mr-2">•</span>
+              <span className="text-gray-300">{rule}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Mods Status */}
+      <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
+        <ModsStatus
+          modsStatus={modsStatus}
+          modBlacklist={modBlacklist}
+          updateBlacklist={updateBlacklist}
+          onRefreshMods={onRefreshMods}
+          onToast={onToast}
+        />
       </div>
     </div>
   )

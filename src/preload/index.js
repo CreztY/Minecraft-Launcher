@@ -20,7 +20,20 @@ const api = {
   },
   getSystemRAM: () => ipcRenderer.invoke('getSystemRAM'),
   getSettings: () => ipcRenderer.invoke('getSettings'),
-  saveSettings: (settings) => ipcRenderer.invoke('saveSettings', settings)
+  saveSettings: (settings) => ipcRenderer.invoke('saveSettings', settings),
+  repairInstallation: () => ipcRenderer.invoke('repair-installation'),
+  updateLauncherProfile: (ram) => ipcRenderer.invoke('update-launcher-profile', ram),
+  deleteMod: (modPath) => ipcRenderer.invoke('delete-mod', modPath),
+  fetchServerStatus: (serverIp, serverPort) =>
+    ipcRenderer.invoke('fetch-server-status', serverIp, serverPort),
+  // Auto-Updater
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  quitAndInstall: () => ipcRenderer.invoke('quit-and-install'),
+  onUpdateStatus: (cb) => {
+    const handler = (_, data) => cb(data)
+    ipcRenderer.on('update-status', handler)
+    return () => ipcRenderer.removeListener('update-status', handler)
+  }
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

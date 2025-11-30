@@ -2,27 +2,7 @@ import { createWriteStream, existsSync, mkdirSync, statSync } from 'fs'
 import { join } from 'path'
 import http from 'http'
 import https from 'https'
-
-function getModsDir() {
-  if (process.platform === 'win32') return join(process.env.APPDATA || '', '.minecraft', 'mods')
-  if (process.platform === 'darwin')
-    return join(process.env.HOME || '', 'Library/Application Support/minecraft', 'mods')
-  return join(process.env.HOME || '', '.minecraft', 'mods')
-}
-
-function getDirForInstallType(type) {
-  if (type === 'shaderpack') {
-    if (process.platform === 'win32') return join(process.env.APPDATA || '', '.minecraft', 'shaderpacks')
-    if (process.platform === 'darwin') return join(process.env.HOME || '', 'Library/Application Support/minecraft', 'shaderpacks')
-    return join(process.env.HOME || '', '.minecraft/shaderpacks')
-  }
-  if (type === 'resourcepack') {
-    if (process.platform === 'win32') return join(process.env.APPDATA || '', '.minecraft', 'resourcepacks')
-    if (process.platform === 'darwin') return join(process.env.HOME || '', 'Library/Application Support/minecraft', 'resourcepacks')
-    return join(process.env.HOME || '', '.minecraft/resourcepacks')
-  }
-  return getModsDir()
-}
+import { getPathForInstallType } from './utils/paths.js'
 
 function followRedirects(url, max = 5) {
   return new Promise((resolve, reject) => {
@@ -76,17 +56,7 @@ function httpDownload(url, destPath, onProgress) {
   })
 }
 
-/**
- * Descarga una lista de mods desde un Nextcloud compartido públicamente.
- * shareUrl: URL de la carpeta compartida (ej: https://cloud.crezty.com/index.php/s/WGFJgMTYRRMBFSB)
- * mods: Array de objetos { id, filename }
- * sendProgress: callback para emitir eventos de progreso ({type, id, filename, percent, ok, path, error})
- */
 export async function downloadMods(shareUrl, mods, sendProgress = () => {}) {
-  // Ensure each target directory exists when needed
-
-  // Normalize share URL to a base usable for direct downloads
-  // Try variants: /s/.../download?files=FILENAME
   let base = shareUrl
   if (shareUrl.includes('/index.php/')) base = shareUrl.replace('/index.php', '')
 
@@ -94,7 +64,6 @@ export async function downloadMods(shareUrl, mods, sendProgress = () => {}) {
     try {
       sendProgress({ type: 'start', id: mod.id, filename: mod.filename })
 
-      // candidate URLs
       const candidates = [
         `${base}/download?files=${encodeURIComponent(mod.filename)}`,
         `${shareUrl}/download?files=${encodeURIComponent(mod.filename)}`,
@@ -102,10 +71,10 @@ export async function downloadMods(shareUrl, mods, sendProgress = () => {}) {
         `${shareUrl}/download?path=/${encodeURIComponent(mod.filename)}`
       ]
 
-      let lastErr = null
+      const errors = []
       let downloaded = false
       const installType = mod.installType || 'mods'
-      const destDir = getDirForInstallType(installType)
+      const destDir = getPathForInstallType(installType)
       if (!existsSync(destDir)) mkdirSync(destDir, { recursive: true })
       const destPath = join(destDir, mod.filename)
 
@@ -117,7 +86,7 @@ export async function downloadMods(shareUrl, mods, sendProgress = () => {}) {
           downloaded = true
           break
         } catch (err) {
-          lastErr = err
+          errors.push({ url: c, error: err.message })
         }
       }
 
@@ -127,7 +96,7 @@ export async function downloadMods(shareUrl, mods, sendProgress = () => {}) {
           id: mod.id,
           filename: mod.filename,
           ok: false,
-          error: lastErr?.message
+          error: `Todos los intentos de descarga fallaron: ${errors.error}`
         })
         continue
       }
