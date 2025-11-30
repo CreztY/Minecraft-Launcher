@@ -13,6 +13,7 @@ import ModsProgress from './components/ModsProgress'
 import UpdateNotification from './components/UpdateNotification'
 import ModsDownloadPopup from './components/ModsDownloadPopup'
 import RepairPopup from './components/RepairPopup'
+import ConfigUpdatePopup from './components/ConfigUpdatePopup'
 import ToastContainer from './components/ToastContainer'
 import { useToast } from './hooks/useToast'
 import { FORGE_DOWNLOAD_URL, MODS_SHARE, NEWS } from '../../config'
@@ -33,6 +34,8 @@ function App() {
   const [showForgePopup, setShowForgePopup] = useState(false)
   const [showModsPopup, setShowModsPopup] = useState(false)
   const [showRepairPopup, setShowRepairPopup] = useState(false)
+  const [showConfigPopup, setShowConfigPopup] = useState(false)
+  const [isConfigUpdating, setIsConfigUpdating] = useState(false)
 
   // Configuración
   const [ramAllocation, setRamAllocation] = useState(12)
@@ -106,7 +109,8 @@ function App() {
       (modsStatus.missing?.length || 0) +
       (modsStatus.modified?.length || 0) +
       (modsStatus.outdated?.length || 0) +
-      (modsStatus.corrupted?.length || 0)
+      (modsStatus.corrupted?.length || 0) +
+      (modsStatus.unused?.length || 0)
     )
   }, [])
 
@@ -137,12 +141,23 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [graphicsLevel, optionalMods, ramAllocation, shaderPreset, modBlacklist])
 
+  const checkConfig = useCallback(async () => {
+    try {
+      const status = await window.api.checkConfig()
+      if (status.status === 'outdated') {
+        setShowConfigPopup(true)
+      }
+    } catch (error) {
+      console.error('Error checking config:', error)
+    }
+  }, [])
+
   useEffect(() => {
     if (isRamLoading) return
 
     const timer = setTimeout(async () => {
       try {
-        await Promise.all([checkJava(), checkForgeVersion(), checkMods()])
+        await Promise.all([checkJava(), checkForgeVersion(), checkMods(), checkConfig()])
       } catch (error) {
         console.error('Error en escaneo automático:', error)
       }
@@ -170,12 +185,26 @@ function App() {
     const off = window.api.onModsDownloadProgress((data) => {
       if (data.type === 'start') {
         setDownloadingMod({ id: data.id, filename: data.filename })
-        setProgress(0)
+        // Calcular progreso base: (mods_completados / total) * 100
+        const current = data.current || 1
+        const total = data.total || 1
+        const baseProgress = ((current - 1) / total) * 100
+        setProgress(baseProgress)
+        setDownloadingItem(`Descargando ${data.filename} (${current}/${total})`)
       } else if (data.type === 'progress') {
-        setProgress(Math.round(data.percent || 0))
+        // Progreso fino: base + (porcentaje_actual / total)
+        const current = data.current || 1
+        const total = data.total || 1
+        const baseProgress = ((current - 1) / total) * 100
+        const fileProgress = (data.percent || 0) / total
+        setProgress(Math.min(99, baseProgress + fileProgress))
       } else if (data.type === 'complete') {
         if (data.ok) {
-          setProgress(100)
+          // Si es el último, 100%, si no, calcular base del siguiente
+          const current = data.current || 1
+          const total = data.total || 1
+          const progress = (current / total) * 100
+          setProgress(progress)
         } else {
           console.error('Download failed for', data.filename, data.error)
           // Extraer solo el primer error para evitar mensajes repetitivos
@@ -202,6 +231,28 @@ function App() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Escuchar eventos de actualización de configuración
+  useEffect(() => {
+    if (!window.api || !window.api.onConfigUpdateProgress) return
+
+    const off = window.api.onConfigUpdateProgress((data) => {
+      if (data.type === 'start') {
+        setIsConfigUpdating(true)
+      } else if (data.type === 'done') {
+        setIsConfigUpdating(false)
+        setShowConfigPopup(false)
+        toast.success('Configuración actualizada correctamente')
+      } else if (data.type === 'error') {
+        setIsConfigUpdating(false)
+        toast.error(`Error al actualizar configuración: ${data.error}`)
+      }
+    })
+
+    return () => {
+      if (typeof off === 'function') off()
+    }
+  }, [toast])
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -302,10 +353,10 @@ function App() {
 
   const getModsToProcess = useCallback((modsStatus, includeAll = true) => {
     if (!modsStatus) return []
-    const { missing = [], modified = [], outdated = [], corrupted = [] } = modsStatus
+    const { missing = [], modified = [], outdated = [], corrupted = [], unused = [] } = modsStatus
     return includeAll
-      ? [...missing, ...modified, ...outdated, ...corrupted]
-      : [...outdated, ...corrupted]
+      ? [...missing, ...modified, ...outdated, ...corrupted, ...unused]
+      : [...outdated, ...corrupted, ...unused]
   }, [])
   const prepareModsPayload = useCallback((mods, cleanInstall = false) => {
     return mods.map((m) => ({
@@ -323,13 +374,25 @@ function App() {
       return
     }
 
-    const payload = prepareModsPayload(toProcess)
+    // Separar mods a eliminar de los que se van a descargar
+    const itemsToDelete = toProcess.filter((m) => m.reason === 'disabled_in_settings')
+    const itemsToDownload = toProcess.filter((m) => m.reason !== 'disabled_in_settings')
+
+    const payload = prepareModsPayload(itemsToDownload)
+    // Para los items a borrar, necesitamos pasar el objeto completo o al menos path/id/filename
+    const deletePayload = itemsToDelete.map((m) => ({
+      id: m.id,
+      filename: m.filename,
+      path: m.path,
+      installType: m.installType
+    }))
+
     setShowModsPopup(false)
     setIsDownloading(true)
-    setDownloadingItem(updateOnly ? 'Actualizando mods' : 'Actualizando/Descargando mods')
+    setDownloadingItem(updateOnly ? 'Actualizando mods' : 'Sincronizando mods')
 
     try {
-      await window.api.updateMods(MODS_SHARE, payload)
+      await window.api.updateMods(MODS_SHARE, payload, deletePayload)
     } catch (error) {
       console.error('Error downloading/updating mods:', error)
       toast.error('Error al descargar/actualizar mods')
@@ -375,6 +438,17 @@ function App() {
       toast.error(`Error al reparar instalación: ${error.message}`)
       setIsDownloading(false)
       setDownloadingItem('')
+    }
+  }
+
+  const handleConfigUpdate = async () => {
+    try {
+      setIsConfigUpdating(true)
+      await window.api.updateConfig()
+    } catch (error) {
+      console.error('Error updating config:', error)
+      toast.error('Error al iniciar actualización de configuración')
+      setIsConfigUpdating(false)
     }
   }
 
@@ -544,6 +618,11 @@ function App() {
         showRepairPopup={showRepairPopup}
         setShowRepairPopup={setShowRepairPopup}
         handleRepair={handleRepairInstallation}
+      />
+      <ConfigUpdatePopup
+        show={showConfigPopup}
+        onUpdate={handleConfigUpdate}
+        isUpdating={isConfigUpdating}
       />
       <ToastContainer />
       <UpdateNotification onToast={toast} />

@@ -7,6 +7,7 @@ import { checkJavaVersion, isJavaVersionCompatible } from './java-detector'
 import { checkForgeVersion, isForgeVersionCompatible } from './forge-detector'
 import { downloadMods } from './mods-downloader'
 import { checkMods } from './mods-detector'
+import { checkConfigStatus, updateConfig } from './config-manager'
 import { existsSync, unlinkSync, rmSync, readdirSync, readFileSync, writeFileSync } from 'fs'
 import os from 'os'
 import {
@@ -228,6 +229,15 @@ app.whenReady().then(async () => {
 
     await downloadMods(shareUrl, downloads, (p) => sendProgressEvent(winChannel, p))
     return { ok: true }
+  })
+
+  ipcMain.handle('check-config', async () => {
+    return await checkConfigStatus()
+  })
+
+  ipcMain.handle('update-config', async () => {
+    const winChannel = 'config-update-progress'
+    return await updateConfig((p) => sendProgressEvent(winChannel, p))
   })
 
   ipcMain.handle('getSettings', () => {

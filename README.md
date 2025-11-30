@@ -10,10 +10,9 @@ Un launcher de Minecraft personalizado y moderno construido con Electron y React
     *   Descarga y actualización automática de mods desde una fuente centralizada.
     *   Verificación de integridad (MD5/SHA256) para detectar archivos corruptos o modificados.
     *   Sistema de **Lista Negra (Blacklist)**: Permite a los usuarios omitir mods opcionales, shaders o gráficos que no deseen, persistiendo esta elección entre sesiones.
-    *   Restauración sencilla de mods omitidos desde la interfaz.
 *   **Detección y Gestión de Java**:
     *   Verifica si Java está instalado y si la versión es compatible.
-    *   Descarga e instala automáticamente el JDK necesario si falta.
+    *   Ayuda a la descarga del JDK necesario si es necesario.
 *   **Instalación de Forge**:
     *   Detecta y descarga la versión correcta de Forge automáticamente.
 *   **Optimización y Configuración**:
@@ -31,11 +30,8 @@ Un launcher de Minecraft personalizado y moderno construido con Electron y React
 
 1.  Descarga la última versión (`.exe`) desde la sección de [Releases](https://github.com/CreztY/Minecraft-Launcher/releases).
 2.  Ejecuta el instalador.
-3.  Al abrir el launcher:
-    *   Ingresa tu nombre de usuario.
-    *   Selecciona la cantidad de RAM deseada.
-    *   El launcher verificará e instalará automáticamente Java, Forge y los Mods necesarios.
-4.  Haz clic en **JUGAR** para iniciar Minecraft.
+3.  Al abrir el launcher Haz clic en Configuración, para seleccionar la cantidad de RAM que deseas asignar al juego, y los mods opcionales que deseas.
+4.  Haz clic en **JUGAR** para que te detecte e instale todo lo necesario para iniciar Minecraft.
 
 ## Configuración (Desarrollador/Mantenedor)
 
@@ -87,7 +83,7 @@ npm run build:win
 1.  Sube la versión en `package.json`.
 2.  Ejecuta `npm run build:win`.
 3.  Crea una nueva Release en GitHub.
-4.  Sube el archivo `.exe` generado (en `dist/` o `out/`) y el archivo `latest.yml` a la Release.
+4.  Sube el archivo `.exe` generado en `dist/` y el archivo `latest.yml` a la Release.
 5.  El launcher detectará la actualización automáticamente.
 
 ## Tecnologías

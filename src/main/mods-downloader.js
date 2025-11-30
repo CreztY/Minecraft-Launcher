@@ -60,9 +60,19 @@ export async function downloadMods(shareUrl, mods, sendProgress = () => {}) {
   let base = shareUrl
   if (shareUrl.includes('/index.php/')) base = shareUrl.replace('/index.php', '')
 
+  const total = mods.length
+  let current = 0
+
   for (const mod of mods) {
+    current++
     try {
-      sendProgress({ type: 'start', id: mod.id, filename: mod.filename })
+      sendProgress({
+        type: 'start',
+        id: mod.id,
+        filename: mod.filename,
+        current,
+        total
+      })
 
       const candidates = [
         `${base}/download?files=${encodeURIComponent(mod.filename)}`,
@@ -81,7 +91,14 @@ export async function downloadMods(shareUrl, mods, sendProgress = () => {}) {
       for (const c of candidates) {
         try {
           await httpDownload(c, destPath, (percent) => {
-            sendProgress({ type: 'progress', id: mod.id, filename: mod.filename, percent })
+            sendProgress({
+              type: 'progress',
+              id: mod.id,
+              filename: mod.filename,
+              percent,
+              current,
+              total
+            })
           })
           downloaded = true
           break
@@ -96,7 +113,9 @@ export async function downloadMods(shareUrl, mods, sendProgress = () => {}) {
           id: mod.id,
           filename: mod.filename,
           ok: false,
-          error: `Todos los intentos de descarga fallaron: ${errors.error}`
+          error: `Todos los intentos de descarga fallaron: ${errors.error}`,
+          current,
+          total
         })
         continue
       }
@@ -109,7 +128,9 @@ export async function downloadMods(shareUrl, mods, sendProgress = () => {}) {
         filename: mod.filename,
         ok: true,
         path: destPath,
-        size
+        size,
+        current,
+        total
       })
     } catch (err) {
       sendProgress({
@@ -117,7 +138,9 @@ export async function downloadMods(shareUrl, mods, sendProgress = () => {}) {
         id: mod.id,
         filename: mod.filename,
         ok: false,
-        error: String(err)
+        error: String(err),
+        current,
+        total
       })
     }
   }

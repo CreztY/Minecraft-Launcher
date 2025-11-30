@@ -33,6 +33,14 @@ const api = {
     const handler = (_, data) => cb(data)
     ipcRenderer.on('update-status', handler)
     return () => ipcRenderer.removeListener('update-status', handler)
+  },
+  // Config Sync
+  checkConfig: () => ipcRenderer.invoke('check-config'),
+  updateConfig: () => ipcRenderer.invoke('update-config'),
+  onConfigUpdateProgress: (cb) => {
+    const handler = (_, data) => cb(data)
+    ipcRenderer.on('config-update-progress', handler)
+    return () => ipcRenderer.removeListener('config-update-progress', handler)
   }
 }
 
