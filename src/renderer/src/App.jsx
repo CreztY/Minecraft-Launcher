@@ -178,6 +178,10 @@ function App() {
 
         // 4. Verificar Config
         await checkConfig()
+
+        // 5. Config
+        await checkConfig()
+
       } catch (error) {
         console.error('Error en secuencia de inicio:', error)
       }

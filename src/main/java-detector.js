@@ -204,8 +204,14 @@ function getJavaPathsFromRegistry() {
  */
 export function isJavaVersionCompatible(version) {
   try {
-    // Extraer número principal de versión
-    const majorVersion = parseInt(version.split('.')[0])
+    const parts = version.split('.')
+    let majorVersion = parseInt(parts[0])
+
+    // Handle 1.x versions (e.g., 1.8.0_xxx)
+    if (majorVersion === 1) {
+      majorVersion = parseInt(parts[1])
+    }
+
     // Java 8+ es compatible con Minecraft
     return majorVersion >= 8
   } catch {

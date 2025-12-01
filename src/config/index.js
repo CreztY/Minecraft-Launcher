@@ -232,16 +232,6 @@ export const RECOMMENDED_MODS = [
     hash: '593f3a9c0baf09d7baf8f9ec44b882716c43fbf11d5cbff607c9f7fa3ec9aeb8'
   },
   {
-    id: 'canary',
-    filename: 'canary-mc1.20.1-0.3.3.jar',
-    name: 'Canary',
-    description:
-      'Mod de optimización enfocado en el rendimiento del servidor y la generación de chunks.',
-    version: '0.3.3',
-    latestVersion: '0.3.3',
-    hash: '51f6d78dd6c7874657e5757fd2f5d780aa3cd415052ad071077b8894c6430942'
-  },
-  {
     id: 'CataclysmWeaponery',
     filename: 'CataclysmWeaponery2.0-1.20.1.jar',
     name: 'Cataclysm Weaponery 2.0',
@@ -915,15 +905,6 @@ export const RECOMMENDED_MODS = [
     hash: '3a47dee789e49050e2819e1c173c7fc4d8020a8604e7ed9afb4017a941ba86f3'
   },
   {
-    id: 'mcw-bridges',
-    filename: 'mcw-bridges-3.1.0-mc1.20.1forge (1).jar',
-    name: 'Macaw’s Bridges (Copia)',
-    description: 'Añade una variedad de puentes de diferentes estilos y materiales al juego.',
-    version: '3.1.0',
-    latestVersion: '3.1.0',
-    hash: 'beaefe9bf9ce1b28d2e6a9957d31ad0c7c0d047b856eecd29ffc2731824fd926'
-  },
-  {
     id: 'mcw-bridges_original',
     filename: 'mcw-bridges-3.1.0-mc1.20.1forge.jar',
     name: 'Macaw’s Bridges',
@@ -1529,16 +1510,6 @@ export const RECOMMENDED_MODS = [
     description:
       'Un mod que te permite comparar los artículos que tienes equipados con los que tienes en la mochila.'
   },
-  // {
-  //   id: 'nosetonotick',
-  //   name: 'No See No Tick',
-  //   filename: 'NoSeeNoTick-2.0.0-1.20.1.jar',
-  //   version: '2.0.0',
-  //   latestVersion: '2.0.0',
-  //   hash: '47d2a7943d31a8c6007a061770b34af062996e8c25e1b925525a3de264241fb9',
-  //   description:
-  //     'Mod de rendimiento configurable que aumenta el rendimiento de la entidad al detener los tics en función de la distancia.'
-  // },
   {
     id: 'betteradvancements',
     name: 'Better Advancements',
@@ -1801,15 +1772,6 @@ export const GRAPHICS_LEVEL_MODS = {
       hash: '7bd16cc4abaadd8936862fd56dd1dd2a6bd3fe7838959cca9578eedf4ae0efe3',
       installType: 'mods'
     },
-    // {
-    //   id: 'prettyrain',
-    //   name: 'Pretty Rain',
-    //   description: 'Mejora los efectos de lluvia, nieve y viento.',
-    //   filename: 'Pretty Rain-1.20.1-Forge-1.1.3.jar',
-    //   version: '1.1.3',
-    //   hash: '4d61ef6e1d1b4a3fb4acfc876fe0cfe14d56afe2097f952332c8c23838096ddf',
-    //   installType: 'mods'
-    // },
     {
       id: 'betteranimationscollection',
       name: 'Better Animations Collection',
@@ -1841,16 +1803,6 @@ export const GRAPHICS_LEVEL_MODS = {
       hash: '6f9d7a22e49357183ea2125c83cd8eb87ce3033b8eaa307b0cd3dacbfb954b5a',
       installType: 'mods'
     }
-    // {
-    //   id: 'particular',
-    //   filename: 'particular-1.20.1-Forge-1.2.7.jar',
-    //   name: 'Particular',
-    //   description: 'Mejora las animaciones del juego.',
-    //   version: '1.2.7',
-    //   latestVersion: '1.2.7',
-    //   hash: '6690973d8d9c651d5b2e17aff48392a5cc8752c01d208012a80c76fd44e63cb1',
-    //   installType: 'mods'
-    // }
   ]
 }
 
