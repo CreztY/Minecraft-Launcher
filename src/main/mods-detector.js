@@ -1,7 +1,13 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'fs'
 import { join } from 'path'
 import crypto from 'crypto'
-import { RECOMMENDED_MODS, getRecommendedMods } from '../config'
+import {
+  RECOMMENDED_MODS,
+  OPTIONAL_MODS,
+  GRAPHICS_LEVEL_MODS,
+  AVAILABLE_SHADERS,
+  getRecommendedMods
+} from '../config'
 import { getMinecraftPath, getPathForInstallType } from './utils/paths.js'
 
 /**
@@ -127,6 +133,7 @@ export async function checkMods(settings = {}) {
     const modified = []
     const outdated = []
     const omitted = []
+    const unused = []
 
     // Verificar cada mod recomendado, teniendo en cuenta su tipo de instalación
     for (const recommendedMod of MODS_TO_CHECK) {
@@ -241,6 +248,80 @@ export async function checkMods(settings = {}) {
       }
     }
 
+    // --- NUEVO: Detectar mods que deberían ser eliminados (limpieza de gráficos/opcionales) ---
+    // Construir lista de todos los mods posibles que gestionamos
+    let allKnownMods = [...RECOMMENDED_MODS]
+
+    // Añadir todos los opcionales
+    Object.values(OPTIONAL_MODS).forEach((list) => {
+      allKnownMods = allKnownMods.concat(list)
+    })
+
+    // Añadir todos los shaders conocidos
+    Object.values(AVAILABLE_SHADERS).forEach((shader) => {
+      allKnownMods.push(shader)
+    })
+
+    // Añadir todos los mods de niveles gráficos
+    Object.values(GRAPHICS_LEVEL_MODS).forEach((list) => {
+      allKnownMods = allKnownMods.concat(list)
+    })
+
+    // Filtrar duplicados en allKnownMods
+    const knownIds = new Set()
+    allKnownMods = allKnownMods.filter((m) => {
+      if (knownIds.has(m.id)) return false
+      knownIds.add(m.id)
+      return true
+    })
+
+    // Identificar mods que están en allKnownMods pero NO en MODS_TO_CHECK (los seleccionados actualmente)
+    const selectedIds = new Set(MODS_TO_CHECK.map((m) => m.id))
+    const disabledMods = allKnownMods.filter((m) => !selectedIds.has(m.id))
+
+    // Verificar si estos mods "deshabilitados" existen en disco para marcarlos como 'unused' (para borrar)
+    for (const disabledMod of disabledMods) {
+      const installType = disabledMod.installType || 'mods'
+      const targetDir = getPathForInstallType(installType)
+
+      if (!existsSync(targetDir)) continue
+
+      // Verificar si existe el archivo exacto o variantes
+      const installedFiles = readdirSync(targetDir)
+      const baseKey = (disabledMod.id || disabledMod.filename || disabledMod.name || '')
+        .toString()
+        .toLowerCase()
+
+      // Buscamos si hay algún archivo que coincida con este mod deshabilitado
+      const foundVariant = installedFiles.find((f) => f.toLowerCase().includes(baseKey))
+
+      if (foundVariant) {
+        const variantPath = join(targetDir, foundVariant)
+
+        // Verificar que no sea uno de los que SÍ queremos (por si acaso el matching de string es muy agresivo)
+        const isActuallyWanted = MODS_TO_CHECK.some(
+          (wanted) =>
+            wanted.filename === foundVariant ||
+            (wanted.id && foundVariant.toLowerCase().includes(wanted.id.toLowerCase()))
+        )
+
+        if (!isActuallyWanted) {
+          const modInfo = {
+            ...disabledMod,
+            installedFilename: foundVariant,
+            path: variantPath,
+            installType,
+            reason: 'disabled_in_settings'
+          }
+          // Evitar duplicados en unused
+          if (!unused.some((u) => u.path === variantPath)) {
+            unused.push(modInfo)
+            console.log(`Mod found but disabled in settings (marked for deletion): ${foundVariant}`)
+          }
+        }
+      }
+    }
+
     return {
       installed,
       missing,
@@ -248,6 +329,7 @@ export async function checkMods(settings = {}) {
       modified,
       outdated,
       omitted,
+      unused,
       modsDir,
       totalExpected: MODS_TO_CHECK.length,
       totalInstalled: installed.length,

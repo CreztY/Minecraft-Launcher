@@ -43,8 +43,8 @@ function App() {
   const [graphicsLevel, setGraphicsLevel] = useState('normal')
   const [shaderPreset, setShaderPreset] = useState('high')
   const [optionalMods, setOptionalMods] = useState({
-    shaders: true,
-    modpack: true,
+    shaders: false,
+    modpack: false,
     minimap: true,
     map: true
   })
@@ -152,31 +152,47 @@ function App() {
     }
   }, [])
 
+  // Secuencia de inicio: Java -> Forge -> Mods -> Config
   useEffect(() => {
     if (isRamLoading) return
 
-    const timer = setTimeout(async () => {
+    const runStartupChecks = async () => {
       try {
-        await Promise.all([checkJava(), checkForgeVersion(), checkMods(), checkConfig()])
+        // 1. Verificar Java
+        const javaInfo = await checkJava()
+        if (!javaInfo.installed || !javaInfo.compatible) {
+          console.log('Java check failed or incompatible. Stopping startup sequence.')
+          return // Detener secuencia
+        }
+
+        // 2. Verificar Forge (solo si Java está OK)
+        const forgeInfo = await checkForgeVersion()
+        if (!forgeInfo.compatible) {
+          console.log('Forge check failed. Stopping startup sequence.')
+          return // Detener secuencia
+        }
+
+        // 3. Verificar Mods (solo si Forge está OK)
+        // Esto mostrará el popup si hay mods faltantes/sobrantes
+        await checkMods()
+
+        // 4. Verificar Config
+        await checkConfig()
       } catch (error) {
-        console.error('Error en escaneo automático:', error)
+        console.error('Error en secuencia de inicio:', error)
       }
-    }, 500)
+    }
+
+    // Pequeño delay para asegurar que la UI esté lista
+    const timer = setTimeout(runStartupChecks, 500)
 
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRamLoading])
 
-  // Auto-refresh mods when blacklist changes
-  useEffect(() => {
-    if (!isRamLoading) {
-      // Small delay to ensure settings are saved/propagated
-      const timer = setTimeout(() => {
-        checkMods()
-      }, 600)
-      return () => clearTimeout(timer)
-    }
-  }, [modBlacklist, checkMods, isRamLoading])
+  // ELIMINADO: Auto-refresh mods when blacklist changes
+  // El usuario solicitó no buscar automáticamente al cambiar settings.
+  // La verificación se hará al dar a "Jugar" o manualmente si añadimos un botón.
 
   // Escuchar eventos de progreso de descarga de mods enviados por el main
   useEffect(() => {
@@ -393,6 +409,18 @@ function App() {
 
     try {
       await window.api.updateMods(MODS_SHARE, payload, deletePayload)
+
+      // Verificación post-descarga
+      // Esperar un momento para asegurar que el sistema de archivos se actualice
+      setTimeout(async () => {
+        console.log('Verificando mods tras descarga...')
+        const newStatus = await checkMods()
+        if (countModsNeedingDownload(newStatus) === 0) {
+          toast.success('Todos los mods están sincronizados correctamente')
+        } else {
+          toast.warning('Algunos mods aún requieren atención')
+        }
+      }, 1000)
     } catch (error) {
       console.error('Error downloading/updating mods:', error)
       toast.error('Error al descargar/actualizar mods')
