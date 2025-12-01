@@ -2,7 +2,7 @@
 
 Un launcher de Minecraft personalizado y moderno construido con Electron y React. Diseñado para simplificar la gestión de mods, la configuración de Java y la optimización del juego.
 
-![Screenshot](resources/icon.png)
+![Screenshot](resources/preview.png)
 
 ## Características Principales
 
