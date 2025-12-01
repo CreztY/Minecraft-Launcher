@@ -21,8 +21,8 @@ export function ConfigUpdatePopup({ show, onUpdate, isUpdating }) {
         </div>
 
         <p className="text-sm text-gray-300 mb-6">
-          Hay una nueva versión de la configuración del cliente (FancyMenu, opciones, etc.).
-          Es necesario actualizar para asegurar la compatibilidad con el servidor.
+          Hay una nueva versión de la configuración del cliente (FancyMenu, opciones, etc.). Es
+          necesario actualizar para asegurar la compatibilidad con el servidor.
         </p>
 
         <button

@@ -14,6 +14,7 @@ function calculateFileHash(filePath) {
     const fileBuffer = readFileSync(filePath)
     return crypto.createHash('sha256').update(fileBuffer).digest('hex')
   } catch (e) {
+    console.error('Error calculating file hash:', e)
     return null
   }
 }
@@ -80,9 +81,9 @@ export async function updateConfig(onProgress) {
 
     const tempDir = getMinecraftPath('temp')
     if (!existsSync(tempDir)) mkdirSync(tempDir, { recursive: true })
-    
+
     const zipPath = join(tempDir, 'client_config.zip')
-    
+
     // 1. Download
     onProgress({ type: 'start', step: 'downloading' })
     await downloadFile(CLIENT_CONFIG.url, zipPath, (percent) => {
@@ -102,15 +103,26 @@ export async function updateConfig(onProgress) {
     onProgress({ type: 'start', step: 'extracting' })
     const zip = new AdmZip(zipPath)
     const minecraftDir = getMinecraftPath()
-    zip.extractAllTo(minecraftDir, true) // overwrite = true
+    const configDir = join(minecraftDir, 'config')
+    
+    if (!existsSync(configDir)) mkdirSync(configDir, { recursive: true })
+    
+    zip.extractAllTo(configDir, true) // overwrite = true
 
     // 4. Update Marker
     const markerPath = getMinecraftPath(CONFIG_MARKER_FILE)
-    writeFileSync(markerPath, JSON.stringify({
-      hash: CLIENT_CONFIG.hash || downloadedHash,
-      date: new Date().toISOString(),
-      version: CLIENT_CONFIG.version
-    }, null, 2))
+    writeFileSync(
+      markerPath,
+      JSON.stringify(
+        {
+          hash: CLIENT_CONFIG.hash || downloadedHash,
+          date: new Date().toISOString(),
+          version: CLIENT_CONFIG.version
+        },
+        null,
+        2
+      )
+    )
 
     onProgress({ type: 'done' })
     return { ok: true }
