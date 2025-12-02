@@ -6,25 +6,25 @@ Un launcher de Minecraft personalizado y moderno construido con Electron y React
 
 ## Características Principales
 
-*   **Gestión Automática de Mods**:
-    *   Descarga y actualización automática de mods desde una fuente centralizada.
-    *   Verificación de integridad (MD5/SHA256) para detectar archivos corruptos o modificados.
-    *   Sistema de **Lista Negra (Blacklist)**: Permite a los usuarios omitir mods opcionales, shaders o gráficos que no deseen, persistiendo esta elección entre sesiones.
-*   **Detección y Gestión de Java**:
-    *   Verifica si Java está instalado y si la versión es compatible.
-    *   Ayuda a la descarga del JDK necesario si es necesario.
-*   **Instalación de Forge**:
-    *   Detecta y descarga la versión correcta de Forge automáticamente.
-*   **Optimización y Configuración**:
-    *   Selector de memoria RAM asignada.
-    *   **Presets de Shaders**: Configuración rápida de shaders (Bajo, Medio, Alto, Ultra) que selecciona automáticamente el shaderpack adecuado.
-    *   Niveles de Gráficos predefinidos.
-*   **Interfaz Moderna**:
-    *   Diseño fluido con animaciones (Framer Motion).
-    *   Notificaciones visuales (Toasts) para el estado de las operaciones.
-    *   Barra de progreso detallada durante la descarga de mods.
-*   **Actualizaciones Automáticas**:
-    *   El launcher se actualiza a sí mismo automáticamente utilizando GitHub Releases.
+- **Gestión Automática de Mods**:
+  - Descarga y actualización automática de mods desde una fuente centralizada.
+  - Verificación de integridad (MD5/SHA256) para detectar archivos corruptos o modificados.
+  - Sistema de **Lista Negra (Blacklist)**: Permite a los usuarios omitir mods opcionales, shaders o gráficos que no deseen, persistiendo esta elección entre sesiones.
+- **Detección y Gestión de Java**:
+  - Verifica si Java está instalado y si la versión es compatible.
+  - Ayuda a la descarga del JDK necesario si es necesario.
+- **Instalación de Forge**:
+  - Detecta y descarga la versión correcta de Forge automáticamente.
+- **Optimización y Configuración**:
+  - Selector de memoria RAM asignada.
+  - **Presets de Shaders**: Configuración rápida de shaders (Bajo, Medio, Alto, Ultra) que selecciona automáticamente el shaderpack adecuado.
+  - Niveles de Gráficos predefinidos.
+- **Interfaz Moderna**:
+  - Diseño fluido con animaciones (Framer Motion).
+  - Notificaciones visuales (Toasts) para el estado de las operaciones.
+  - Barra de progreso detallada durante la descarga de mods.
+- **Actualizaciones Automáticas**:
+  - El launcher se actualiza a sí mismo automáticamente utilizando GitHub Releases.
 
 ## Instalación y Uso (Usuario Final)
 
@@ -38,12 +38,15 @@ Un launcher de Minecraft personalizado y moderno construido con Electron y React
 La configuración principal de los mods y el juego se encuentra en `src/config/index.js`.
 
 ### Añadir o Quitar Mods
+
 Edita las listas en `src/config/index.js`:
-*   `RECOMMENDED_MODS`: Mods obligatorios que siempre se descargarán.
-*   `OPTIONAL_MODS`: Mods que el usuario puede elegir omitir (aunque por defecto se descargan).
-*   `GRAPHICS_LEVEL_MODS`: Mods específicos para ciertos niveles de gráficos.
+
+- `RECOMMENDED_MODS`: Mods obligatorios que siempre se descargarán.
+- `OPTIONAL_MODS`: Mods que el usuario puede elegir omitir (aunque por defecto se descargan).
+- `GRAPHICS_LEVEL_MODS`: Mods específicos para ciertos niveles de gráficos.
 
 **Formato de un mod:**
+
 ```javascript
 {
   id: 'nombre-unico',
@@ -56,15 +59,18 @@ Edita las listas en `src/config/index.js`:
 ```
 
 ### Cambiar la URL de Descarga
+
 Modifica la constante `MODS_SHARE` en `src/config/index.js` para apuntar a tu servidor o carpeta compartida donde se alojan los archivos `.jar`.
 
 ## Desarrollo
 
 ### Requisitos
-*   Node.js (v18 o superior recomendado)
-*   NPM
+
+- Node.js (v18 o superior recomendado)
+- NPM
 
 ### Comandos
+
 ```bash
 # Instalar dependencias
 npm install
@@ -80,6 +86,7 @@ npm run build:win
 ```
 
 ### Publicar una Actualización
+
 1.  Sube la versión en `package.json`.
 2.  Ejecuta `npm run build:win`.
 3.  Crea una nueva Release en GitHub.
@@ -88,10 +95,9 @@ npm run build:win
 
 ## Tecnologías
 
-*   [Electron](https://www.electronjs.org/)
-*   [React](https://reactjs.org/)
-*   [Vite](https://vitejs.dev/)
-*   [Tailwind CSS](https://tailwindcss.com/)
-*   [Framer Motion](https://www.framer.com/motion/)
-*   [Electron Updater](https://www.electron.build/auto-update)
-
+- [Electron](https://www.electronjs.org/)
+- [React](https://reactjs.org/)
+- [Vite](https://vitejs.dev/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [Framer Motion](https://www.framer.com/motion/)
+- [Electron Updater](https://www.electron.build/auto-update)

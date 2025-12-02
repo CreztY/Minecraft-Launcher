@@ -6,7 +6,7 @@ import {
   OPTIONAL_MODS,
   GRAPHICS_LEVEL_MODS,
   AVAILABLE_SHADERS,
-  getRecommendedMods
+  SHADER_PRESETS
 } from '../config'
 import { getMinecraftPath, getPathForInstallType } from './utils/paths.js'
 
@@ -49,293 +49,278 @@ function compareVersions(a, b) {
 }
 
 /**
- * Extrae una versión desde el nombre de archivo, por ejemplo
- * 'melody_forge_1.0.3_MC_1.20.1-1.20.4.jar' => '1.0.3'
+ * Obtiene los mods recomendados basados en los settings
  */
-function extractVersionFromFilename(filename) {
-  // Eliminar la extensión
-  const nameWithoutExt = filename.replace(/\.(jar|zip)$/i, '')
+function getRecommendedMods(settings = {}) {
+  const { graphicsLevel = 'normal', optionalMods = {}, shaderPreset = 'high' } = settings
 
-  // Patrón 1: Buscar versión explícita después de _MC_ o -MC- (versión de Minecraft)
-  // Ejemplo: fancymenu_forge_3.8.1_MC_1.20.1.jar
-  const mcPattern = /^(.+?)[-_](\d+\.\d+(?:\.\d+)?(?:\.\d+)?)[-_](?:MC|mc)[-_]/i
-  const mcMatch = nameWithoutExt.match(mcPattern)
-  if (mcMatch) {
-    return mcMatch[2] // La versión del mod está antes de _MC_
+  let mods = [...RECOMMENDED_MODS]
+
+  // Añadir mods opcionales si están habilitados
+  Object.entries(optionalMods).forEach(([key, enabled]) => {
+    if (enabled && OPTIONAL_MODS[key]) {
+      mods = mods.concat(OPTIONAL_MODS[key])
+    }
+  })
+
+  // Añadir shaders según preset si están habilitados
+  if (optionalMods.shaders && SHADER_PRESETS[shaderPreset]) {
+    const presetShaders = SHADER_PRESETS[shaderPreset].shaders
+    presetShaders.forEach((shaderId) => {
+      if (AVAILABLE_SHADERS[shaderId]) {
+        mods.push(AVAILABLE_SHADERS[shaderId])
+      }
+    })
   }
 
-  // Patrón 2: Cuando empieza con versión de MC (1.20.x), buscar la siguiente versión más larga
-  // Ejemplo: jei-1.20.1-forge-15.20.0.125.jar
+  // Añadir mods según nivel gráfico
+  if (GRAPHICS_LEVEL_MODS[graphicsLevel]) {
+    mods = mods.concat(GRAPHICS_LEVEL_MODS[graphicsLevel])
+  }
+
+  // Remover duplicados por ID
+  const seenIds = new Set()
+  mods = mods.filter((mod) => {
+    if (seenIds.has(mod.id)) return false
+    seenIds.add(mod.id)
+    return true
+  })
+
+  return mods
+}
+
+/**
+ * Extrae una versión desde el nombre de archivo
+ */
+function extractVersionFromFilename(filename) {
+  const nameWithoutExt = filename.replace(/\.(jar|zip)$/i, '')
+
+  // Patrón 1: Buscar versión explícita después de _MC_ o -MC-
+  const mcPattern = /^(.+?)[-_](\d+\.\d+(?:\.\d+)?(?:\.\d+)?)[-_](?:MC|mc)[-_]/i
+  const mcMatch = nameWithoutExt.match(mcPattern)
+  if (mcMatch) return mcMatch[2]
+
+  // Patrón 2: Cuando empieza con versión de MC
   const mcFirstPattern = /^.*?-?(1\.\d{1,2}(?:\.\d+)?)-.*?-(\d+\.\d+\.\d+(?:\.\d+)?)/
   const mcFirstMatch = nameWithoutExt.match(mcFirstPattern)
   if (mcFirstMatch) {
     const minecraftVer = mcFirstMatch[1]
     const modVer = mcFirstMatch[2]
-
-    // Si la segunda versión tiene más componentes, probablemente es la del mod
-    const mcParts = minecraftVer.split('.').length
-    const modParts = modVer.split('.').length
-
-    if (modParts > mcParts) {
+    if (modVer.split('.').length > minecraftVer.split('.').length) {
       return modVer
     }
   }
 
-  // Patrón 3: Buscar la versión más larga/compleja (más componentes)
-  // Los mods suelen tener versiones más largas que Minecraft
+  // Patrón 3: Buscar la versión más larga/compleja
   const allVersions = nameWithoutExt.match(/\d+\.\d+(?:\.\d+)?(?:\.\d+)?/g) || []
-
   if (allVersions.length > 0) {
-    // Filtrar versiones que parecen ser de Minecraft (1.x.x o 1.xx.x)
     const nonMcVersions = allVersions.filter((v) => {
-      // Si empieza con "1." y el siguiente número es menor a 21, probablemente es MC
       const match = v.match(/^1\.(\d+)/)
-      if (match && parseInt(match[1]) <= 21) {
-        return false // Es versión de Minecraft
-      }
-      return true
+      return !(match && parseInt(match[1]) <= 21)
     })
 
     if (nonMcVersions.length > 0) {
-      // Retornar la versión con más componentes (más específica)
-      return nonMcVersions.sort((a, b) => {
-        const aParts = a.split('.').length
-        const bParts = b.split('.').length
-        return bParts - aParts
-      })[0]
+      return nonMcVersions.sort((a, b) => b.split('.').length - a.split('.').length)[0]
     }
-
-    // Si todas parecen ser de MC, tomar la última encontrada
     return allVersions[allVersions.length - 1]
   }
 
   return null
 }
 
+function getInstallTypeExtension(installType) {
+  return installType === 'shaderpack' || installType === 'resourcepack' ? '.zip' : '.jar'
+}
+
+function findInstalledVariant(targetDir, mod, installedFiles) {
+  const baseKey = (mod.id || mod.filename || mod.name || '').toString().toLowerCase()
+  return installedFiles.find((f) => f.toLowerCase().includes(baseKey))
+}
+
+function verifyMod(mod, targetDir, installedFiles) {
+  const modPath = join(targetDir, mod.filename)
+  let status = 'missing' // missing, installed, corrupted, outdated
+  let details = {}
+
+  if (existsSync(modPath)) {
+    // Exact match found
+
+    const fileSize = statSync(modPath).size
+    const fileHash = calculateFileHash(modPath)
+    const expectedHash = mod.expectedHash || mod.hash || mod.expected || null
+
+    details = {
+      installedFilename: mod.filename,
+      installedHash: fileHash,
+      fileSize,
+      path: modPath
+    }
+
+    if (expectedHash && fileHash && expectedHash !== fileHash) {
+      status = 'corrupted'
+      details.expectedHash = expectedHash
+    } else {
+      status = 'installed'
+      if (mod.version) {
+        const installedVersion = extractVersionFromFilename(mod.filename)
+        if (installedVersion && compareVersions(installedVersion, mod.version) < 0) {
+          status = 'outdated'
+          details.installedVersion = installedVersion
+        }
+      }
+    }
+  } else {
+    // Check for variants
+    const foundVariant = findInstalledVariant(targetDir, mod, installedFiles)
+    if (foundVariant) {
+      const variantPath = join(targetDir, foundVariant)
+      const fileSize = statSync(variantPath).size
+      const fileHash = calculateFileHash(variantPath)
+      const installedVersion = extractVersionFromFilename(foundVariant)
+      const expectedHash = mod.expectedHash || mod.hash || mod.expected || null
+
+      details = {
+        installedFilename: foundVariant,
+        installedHash: fileHash,
+        fileSize,
+        installedVersion,
+        path: variantPath
+      }
+
+      if (expectedHash && fileHash && expectedHash !== fileHash) {
+        status = 'corrupted' // Variant found but hash mismatch (might be different version)
+        details.expectedHash = expectedHash
+      } else if (
+        mod.version &&
+        installedVersion &&
+        compareVersions(installedVersion, mod.version) < 0
+      ) {
+        status = 'outdated'
+      } else {
+        status = 'installed' // Variant installed and seems okay
+      }
+    }
+  }
+
+  return { status, details }
+}
+
+function getUnusedMods(selectedMods) {
+  let allKnownMods = [...RECOMMENDED_MODS]
+  Object.values(OPTIONAL_MODS).forEach((list) => (allKnownMods = allKnownMods.concat(list)))
+  Object.values(AVAILABLE_SHADERS).forEach((shader) => allKnownMods.push(shader))
+  Object.values(GRAPHICS_LEVEL_MODS).forEach((list) => (allKnownMods = allKnownMods.concat(list)))
+
+  // Filter duplicates
+  const knownIds = new Set()
+  allKnownMods = allKnownMods.filter((m) => {
+    if (knownIds.has(m.id)) return false
+    knownIds.add(m.id)
+    return true
+  })
+
+  const selectedIds = new Set(selectedMods.map((m) => m.id))
+  return allKnownMods.filter((m) => !selectedIds.has(m.id))
+}
+
 /**
  * Verifica mods instalados comparándolos con la lista recomendada
- * @param {Object} settings - Configuración de usuario {graphicsLevel, optionalMods}
- * @returns {Promise<{installed: Array, missing: Array, corrupted: Array, modified: Array}>}
  */
 export async function checkMods(settings = {}) {
   try {
     console.log('Checking mods...', settings)
 
-    // Obtener lista de mods recomendados según settings
     const MODS_TO_CHECK = getRecommendedMods(settings)
     const modsDir = getMinecraftPath('mods')
     const modBlacklist = settings.modBlacklist || []
 
-    console.log('Checking directories. Mods base dir:', modsDir)
-    const installed = []
-    const missing = []
-    const corrupted = []
-    const modified = []
-    const outdated = []
-    const omitted = []
-    const unused = []
+    const result = {
+      installed: [],
+      missing: [],
+      corrupted: [],
+      modified: [],
+      outdated: [],
+      omitted: [],
+      unused: [],
+      modsDir,
+      totalExpected: MODS_TO_CHECK.length
+    }
 
-    // Verificar cada mod recomendado, teniendo en cuenta su tipo de instalación
-    for (const recommendedMod of MODS_TO_CHECK) {
-      // Si está en blacklist, lo marcamos como omitido y saltamos verificación
-      if (modBlacklist.includes(recommendedMod.id)) {
-        omitted.push(recommendedMod)
-        console.log(`Mod omitted (blacklisted): ${recommendedMod.name}`)
+    for (const mod of MODS_TO_CHECK) {
+      if (modBlacklist.includes(mod.id)) {
+        result.omitted.push(mod)
         continue
       }
 
-      const installType = recommendedMod.installType || 'mods'
+      const installType = mod.installType || 'mods'
       const targetDir = getPathForInstallType(installType)
 
-      const extCheck =
-        installType === 'shaderpack' || installType === 'resourcepack'
-          ? (f) => f.endsWith('.zip')
-          : (f) => f.endsWith('.jar')
-
-      const modPath = join(targetDir, recommendedMod.filename)
-
-      // Si carpeta objetivo no existe, consideramos que está faltante
       if (!existsSync(targetDir)) {
-        missing.push(recommendedMod)
-        console.log(`Target dir not found for ${recommendedMod.name}: ${targetDir}`)
+        result.missing.push(mod)
         continue
       }
 
-      const installedFiles = readdirSync(targetDir).filter((f) => extCheck(f))
+      const ext = getInstallTypeExtension(installType)
+      const installedFiles = readdirSync(targetDir).filter((f) => f.endsWith(ext))
 
-      if (!existsSync(modPath)) {
-        // Buscar variantes dentro del targetDir
-        const baseKey = (recommendedMod.id || recommendedMod.filename || recommendedMod.name || '')
-          .toString()
-          .toLowerCase()
-        const foundVariant = installedFiles.find((f) => f.toLowerCase().includes(baseKey))
+      const verification = verifyMod(mod, targetDir, installedFiles)
+      const modInfo = { ...mod, ...verification.details, installType }
 
-        if (foundVariant) {
-          const variantPath = join(targetDir, foundVariant)
-          const fileSize = statSync(variantPath).size
-          const fileHash = calculateFileHash(variantPath)
-          const installedVersion = extractVersionFromFilename(foundVariant)
-
-          const modInfo = {
-            ...recommendedMod,
-            installedFilename: foundVariant,
-            installedHash: fileHash,
-            fileSize,
-            installedVersion,
-            path: variantPath,
-            installType
-          }
-
-          const expectedHash =
-            recommendedMod.expectedHash || recommendedMod.hash || recommendedMod.expected || null
-
-          if (expectedHash && fileHash && expectedHash !== fileHash) {
-            corrupted.push({ ...modInfo, expectedHash })
-            console.log(`Mod corrupted (variant): ${recommendedMod.name} (hash mismatch)`)
-          } else if (
-            recommendedMod.version &&
-            installedVersion &&
-            compareVersions(installedVersion, recommendedMod.version) < 0
-          ) {
-            outdated.push(modInfo)
-            console.log(
-              `Mod outdated: ${recommendedMod.name} (${installedVersion} < ${recommendedMod.version})`
-            )
-          } else {
-            installed.push(modInfo)
-            console.log(
-              `Mod installed (variant): ${recommendedMod.name} -> ${foundVariant} (hash: ${fileHash?.substring(0, 8)}...)`
-            )
-          }
-        } else {
-          missing.push(recommendedMod)
-          console.log(`Mod missing: ${recommendedMod.name} in ${targetDir}`)
-        }
-      } else {
-        // Archivo exactamente como se espera
-        const fileSize = statSync(modPath).size
-        const fileHash = calculateFileHash(modPath)
-
-        const modInfo = {
-          ...recommendedMod,
-          installedHash: fileHash,
-          fileSize: fileSize,
-          path: modPath,
-          installType
-        }
-
-        const expectedHash =
-          recommendedMod.expectedHash || recommendedMod.hash || recommendedMod.expected || null
-        if (expectedHash && fileHash && expectedHash !== fileHash) {
-          corrupted.push({ ...modInfo, expectedHash })
-          console.log(`Mod corrupted: ${recommendedMod.name} (hash mismatch)`)
-        } else {
-          installed.push(modInfo)
-          console.log(
-            `Mod installed: ${recommendedMod.name} (hash: ${fileHash?.substring(0, 8)}...)`
-          )
-        }
-
-        if (recommendedMod.version) {
-          const installedVersion = extractVersionFromFilename(recommendedMod.filename)
-          if (installedVersion && compareVersions(installedVersion, recommendedMod.version) < 0) {
-            outdated.push({ ...modInfo, installedVersion })
-            console.log(
-              `Mod outdated (exact file): ${recommendedMod.name} (${installedVersion} < ${recommendedMod.version})`
-            )
-          }
-        }
+      switch (verification.status) {
+        case 'installed':
+          result.installed.push(modInfo)
+          break
+        case 'corrupted':
+          result.corrupted.push(modInfo)
+          break
+        case 'outdated':
+          result.outdated.push(modInfo)
+          break
+        case 'missing':
+        default:
+          result.missing.push(modInfo)
+          break
       }
     }
 
-    // --- NUEVO: Detectar mods que deberían ser eliminados (limpieza de gráficos/opcionales) ---
-    // Construir lista de todos los mods posibles que gestionamos
-    let allKnownMods = [...RECOMMENDED_MODS]
-
-    // Añadir todos los opcionales
-    Object.values(OPTIONAL_MODS).forEach((list) => {
-      allKnownMods = allKnownMods.concat(list)
-    })
-
-    // Añadir todos los shaders conocidos
-    Object.values(AVAILABLE_SHADERS).forEach((shader) => {
-      allKnownMods.push(shader)
-    })
-
-    // Añadir todos los mods de niveles gráficos
-    Object.values(GRAPHICS_LEVEL_MODS).forEach((list) => {
-      allKnownMods = allKnownMods.concat(list)
-    })
-
-    // Filtrar duplicados en allKnownMods
-    const knownIds = new Set()
-    allKnownMods = allKnownMods.filter((m) => {
-      if (knownIds.has(m.id)) return false
-      knownIds.add(m.id)
-      return true
-    })
-
-    // Identificar mods que están en allKnownMods pero NO en MODS_TO_CHECK (los seleccionados actualmente)
-    const selectedIds = new Set(MODS_TO_CHECK.map((m) => m.id))
-    const disabledMods = allKnownMods.filter((m) => !selectedIds.has(m.id))
-
-    // Verificar si estos mods "deshabilitados" existen en disco para marcarlos como 'unused' (para borrar)
-    for (const disabledMod of disabledMods) {
-      const installType = disabledMod.installType || 'mods'
+    // Check for unused mods
+    const unusedCandidates = getUnusedMods(MODS_TO_CHECK)
+    for (const unusedMod of unusedCandidates) {
+      const installType = unusedMod.installType || 'mods'
       const targetDir = getPathForInstallType(installType)
-
       if (!existsSync(targetDir)) continue
 
-      // Verificar si existe el archivo exacto o variantes
       const installedFiles = readdirSync(targetDir)
-      const baseKey = (disabledMod.id || disabledMod.filename || disabledMod.name || '')
-        .toString()
-        .toLowerCase()
-
-      // Buscamos si hay algún archivo que coincida con este mod deshabilitado
-      const foundVariant = installedFiles.find((f) => f.toLowerCase().includes(baseKey))
+      const foundVariant = findInstalledVariant(targetDir, unusedMod, installedFiles)
 
       if (foundVariant) {
-        const variantPath = join(targetDir, foundVariant)
-
-        // Verificar que no sea uno de los que SÍ queremos (por si acaso el matching de string es muy agresivo)
-        const isActuallyWanted = MODS_TO_CHECK.some(
+        // Double check it's not actually wanted (e.g. filename overlap)
+        const isWanted = MODS_TO_CHECK.some(
           (wanted) =>
             wanted.filename === foundVariant ||
             (wanted.id && foundVariant.toLowerCase().includes(wanted.id.toLowerCase()))
         )
 
-        if (!isActuallyWanted) {
-          const modInfo = {
-            ...disabledMod,
-            installedFilename: foundVariant,
-            path: variantPath,
-            installType,
-            reason: 'disabled_in_settings'
-          }
-          // Evitar duplicados en unused
-          if (!unused.some((u) => u.path === variantPath)) {
-            unused.push(modInfo)
-            console.log(`Mod found but disabled in settings (marked for deletion): ${foundVariant}`)
+        if (!isWanted) {
+          const variantPath = join(targetDir, foundVariant)
+          if (!result.unused.some((u) => u.path === variantPath)) {
+            result.unused.push({
+              ...unusedMod,
+              installedFilename: foundVariant,
+              path: variantPath,
+              installType,
+              reason: 'disabled_in_settings'
+            })
           }
         }
       }
     }
 
-    return {
-      installed,
-      missing,
-      corrupted,
-      modified,
-      outdated,
-      omitted,
-      unused,
-      modsDir,
-      totalExpected: MODS_TO_CHECK.length,
-      totalInstalled: installed.length,
-      totalMissing: missing.length,
-      totalOmitted: omitted.length
-    }
+    result.totalInstalled = result.installed.length
+    result.totalMissing = result.missing.length
+    result.totalOmitted = result.omitted.length
+
+    return result
   } catch (error) {
     console.error('Error checking mods:', error)
     return {

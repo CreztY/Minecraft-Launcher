@@ -103,11 +103,10 @@ export async function updateConfig(onProgress) {
     onProgress({ type: 'start', step: 'extracting' })
     const zip = new AdmZip(zipPath)
     const minecraftDir = getMinecraftPath()
-    const configDir = join(minecraftDir, 'config')
-    
-    if (!existsSync(configDir)) mkdirSync(configDir, { recursive: true })
-    
-    zip.extractAllTo(configDir, true) // overwrite = true
+
+    if (!existsSync(minecraftDir)) mkdirSync(minecraftDir, { recursive: true })
+
+    zip.extractAllTo(minecraftDir, true)
 
     // 4. Update Marker
     const markerPath = getMinecraftPath(CONFIG_MARKER_FILE)

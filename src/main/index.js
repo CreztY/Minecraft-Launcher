@@ -141,43 +141,21 @@ app.whenReady().then(async () => {
 
   ipcMain.handle('fetch-server-status', async (_, serverIp, serverPort) => {
     try {
-      const https = await import('https')
       const url = `https://api.mcsrvstat.us/3/${serverIp}:${serverPort}`
-
-      const options = {
+      const response = await fetch(url, {
         headers: {
           'User-Agent': 'Minecraft-Launcher/1.0 (Electron)'
         }
+      })
+
+      if (!response.ok) {
+        return { ok: false, error: `HTTP error! status: ${response.status}` }
       }
 
-      return new Promise((resolve) => {
-        https
-          .get(url, options, (res) => {
-            let data = ''
-            res.on('data', (chunk) => {
-              data += chunk
-            })
-            res.on('end', () => {
-              try {
-                const parsed = JSON.parse(data)
-                resolve({ ok: true, data: parsed })
-              } catch (e) {
-                console.error('Failed to parse server response. Raw data:', data)
-                console.error('Failed to parse server response. Error:', e)
-                resolve({
-                  ok: false,
-                  error: `API returned non-JSON response: ${data.substring(0, 100)}`
-                })
-              }
-            })
-          })
-          .on('error', (err) => {
-            console.error('Server status request error:', err)
-            resolve({ ok: false, error: err.message })
-          })
-      })
+      const data = await response.json()
+      return { ok: true, data }
     } catch (error) {
-      console.error('Server status handler error:', error)
+      console.error('Server status request error:', error)
       return { ok: false, error: error.message }
     }
   })

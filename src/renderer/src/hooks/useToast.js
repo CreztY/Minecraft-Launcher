@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useToastContext } from '../contexts/ToastContext'
 
 export function useToast() {
@@ -32,5 +32,5 @@ export function useToast() {
     [addToast]
   )
 
-  return { success, error, warning, info }
+  return useMemo(() => ({ success, error, warning, info }), [success, error, warning, info])
 }

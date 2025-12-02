@@ -1,13 +1,14 @@
 import PropTypes from 'prop-types'
-import { Download, Settings } from 'lucide-react'
+import { Download, Settings, X } from 'lucide-react'
 
 ConfigUpdatePopup.propTypes = {
   show: PropTypes.bool.isRequired,
   onUpdate: PropTypes.func.isRequired,
+  onCancel: PropTypes.func.isRequired,
   isUpdating: PropTypes.bool.isRequired
 }
 
-export function ConfigUpdatePopup({ show, onUpdate, isUpdating }) {
+export function ConfigUpdatePopup({ show, onUpdate, onCancel, isUpdating }) {
   if (!show) return null
 
   return (
@@ -25,23 +26,34 @@ export function ConfigUpdatePopup({ show, onUpdate, isUpdating }) {
           necesario actualizar para asegurar la compatibilidad con el servidor.
         </p>
 
-        <button
-          onClick={onUpdate}
-          disabled={isUpdating}
-          className="w-full px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center justify-center space-x-2"
-        >
-          {isUpdating ? (
-            <>
-              <div className="w-4 h-4 rounded-full border-2 border-blue-300 border-t-white animate-spin"></div>
-              <span>Actualizando...</span>
-            </>
-          ) : (
-            <>
-              <Download className="w-4 h-4" />
-              <span>Actualizar Configuración</span>
-            </>
-          )}
-        </button>
+        <div className="flex flex-col space-y-2">
+          <button
+            onClick={onUpdate}
+            disabled={isUpdating}
+            className="w-full px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center justify-center space-x-2"
+          >
+            {isUpdating ? (
+              <>
+                <div className="w-4 h-4 rounded-full border-2 border-blue-300 border-t-white animate-spin"></div>
+                <span>Actualizando...</span>
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4" />
+                <span>Actualizar Configuración</span>
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={onCancel}
+            disabled={isUpdating}
+            className="w-full px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center justify-center space-x-2"
+          >
+            <X className="w-4 h-4" />
+            <span>Cancelar (hasta reiniciar)</span>
+          </button>
+        </div>
       </div>
     </div>
   )

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import Sidebar from './components/Sidebar'
 import ProgressBar from './components/ProgressBar'
@@ -16,26 +16,16 @@ import RepairPopup from './components/RepairPopup'
 import ConfigUpdatePopup from './components/ConfigUpdatePopup'
 import ToastContainer from './components/ToastContainer'
 import { useToast } from './hooks/useToast'
+import { useStartupChecks } from './hooks/useStartupChecks'
+import { useModsDownload } from './hooks/useModsDownload'
 import { FORGE_DOWNLOAD_URL, MODS_SHARE, NEWS } from '../../config'
 
 function App() {
   const toast = useToast()
   const [activeTab, setActiveTab] = useState('home')
-  const [javaInstalled, setJavaInstalled] = useState(null)
-  const [javaVersion, setJavaVersion] = useState(null)
-  const [forgeStatus, setForgeStatus] = useState(null)
-  const [forgeVersion, setForgeVersion] = useState(null)
-  const [modsStatus, setModsStatus] = useState(null)
-  const [progress, setProgress] = useState(0)
-  const [isDownloading, setIsDownloading] = useState(false)
-  const [downloadingItem, setDownloadingItem] = useState('')
-  const [downloadingMod, setDownloadingMod] = useState(null)
-  const [showJavaPopup, setShowJavaPopup] = useState(false)
-  const [showForgePopup, setShowForgePopup] = useState(false)
-  const [showModsPopup, setShowModsPopup] = useState(false)
   const [showRepairPopup, setShowRepairPopup] = useState(false)
-  const [showConfigPopup, setShowConfigPopup] = useState(false)
   const [isConfigUpdating, setIsConfigUpdating] = useState(false)
+  const [configUpdateCancelled, setConfigUpdateCancelled] = useState(false)
 
   // Configuración
   const [ramAllocation, setRamAllocation] = useState(12)
@@ -54,203 +44,59 @@ function App() {
   // Noticias desde configuración
   const [news] = useState(NEWS)
 
-  const checkJava = useCallback(async () => {
-    try {
-      // Llamada segura al main process expuesta por preload
-      const javaInfo = await window.api.checkJava()
-      setJavaInstalled(Boolean(javaInfo.installed && javaInfo.compatible))
-      setJavaVersion(javaInfo.version)
+  // Custom Hooks
+  const {
+    javaInstalled,
+    javaVersion,
+    forgeStatus,
+    forgeVersion,
+    modsStatus,
+    showJavaPopup,
+    setShowJavaPopup,
+    showForgePopup,
+    setShowForgePopup,
+    showModsPopup,
+    setShowModsPopup,
+    showConfigPopup,
+    setShowConfigPopup,
+    checkJava,
+    checkForgeVersion,
+    checkMods,
+    runStartupChecks,
+    countModsNeedingDownload
+  } = useStartupChecks({
+    isRamLoading,
+    ramAllocation,
+    graphicsLevel,
+    optionalMods,
+    shaderPreset,
+    modBlacklist,
+    toast
+  })
 
-      // Mostrar popup si no está instalado o no es compatible
-      if (!javaInfo.installed || !javaInfo.compatible) {
-        setShowJavaPopup(true)
-      }
+  const {
+    progress,
+    setProgress,
+    isDownloading,
+    setIsDownloading,
+    downloadingItem,
+    setDownloadingItem,
+    downloadingMod,
+    handleModsDownload,
+    getModsToProcess,
+    prepareModsPayload
+  } = useModsDownload({
+    modsStatus,
+    checkMods,
+    setShowModsPopup,
+    toast
+  })
 
-      return javaInfo
-    } catch (error) {
-      console.error('Error checking Java:', error)
-      // Fallback a búsqueda manual
-      setJavaInstalled(false)
-      setShowJavaPopup(true)
-      return { installed: false, compatible: false, version: null }
-    }
-  }, [])
-
-  const checkForgeVersion = useCallback(async () => {
-    try {
-      const forgeInfo = await window.api.checkForgeVersion()
-      setForgeStatus(forgeInfo.status)
-      setForgeVersion(forgeInfo.version)
-
-      // Mostrar popup si no está instalado o no es compatible
-      if (!forgeInfo.compatible) {
-        setShowForgePopup(true)
-      } else {
-        setShowForgePopup(false)
-        // Si Forge es compatible, asegurar que la RAM esté actualizada
-        const result = await window.api.updateLauncherProfile(ramAllocation)
-        if (!result.ok) {
-          toast.warning('No se pudo actualizar el perfil del launcher')
-        }
-      }
-
-      return forgeInfo
-    } catch (error) {
-      console.error('Error checking Forge:', error)
-      toast.error('Error al verificar Forge')
-      return { status: 'notInstalled', compatible: false }
-    }
-  }, [ramAllocation, toast])
-
-  // Helper: Calcular cantidad de mods que necesitan descarga
-  const countModsNeedingDownload = useCallback((modsStatus) => {
-    if (!modsStatus) return 0
-    return (
-      (modsStatus.missing?.length || 0) +
-      (modsStatus.modified?.length || 0) +
-      (modsStatus.outdated?.length || 0) +
-      (modsStatus.corrupted?.length || 0) +
-      (modsStatus.unused?.length || 0)
-    )
-  }, [])
-
-  const checkMods = useCallback(async () => {
-    try {
-      const settings = {
-        graphicsLevel,
-        optionalMods,
-        ramAllocation,
-        shaderPreset,
-        modBlacklist
-      }
-      const modsInfo = await window.api.checkMods(settings)
-      setModsStatus(modsInfo)
-
-      // Mostrar popup si hay mods faltantes, modificados, desactualizados o corruptos
-      if (countModsNeedingDownload(modsInfo) > 0) {
-        setShowModsPopup(true)
-      }
-
-      return modsInfo
-    } catch (error) {
-      console.error('Error checking mods:', error)
-      toast.error('Error al verificar mods')
-      setModsStatus(null)
-      return null
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [graphicsLevel, optionalMods, ramAllocation, shaderPreset, modBlacklist])
-
-  const checkConfig = useCallback(async () => {
-    try {
-      const status = await window.api.checkConfig()
-      if (status.status === 'outdated') {
-        setShowConfigPopup(true)
-      }
-    } catch (error) {
-      console.error('Error checking config:', error)
-    }
-  }, [])
-
-  // Secuencia de inicio: Java -> Forge -> Mods -> Config
+  // Secuencia de inicio
   useEffect(() => {
-    if (isRamLoading) return
-
-    const runStartupChecks = async () => {
-      try {
-        // 1. Verificar Java
-        const javaInfo = await checkJava()
-        if (!javaInfo.installed || !javaInfo.compatible) {
-          console.log('Java check failed or incompatible. Stopping startup sequence.')
-          return // Detener secuencia
-        }
-
-        // 2. Verificar Forge (solo si Java está OK)
-        const forgeInfo = await checkForgeVersion()
-        if (!forgeInfo.compatible) {
-          console.log('Forge check failed. Stopping startup sequence.')
-          return // Detener secuencia
-        }
-
-        // 3. Verificar Mods (solo si Forge está OK)
-        // Esto mostrará el popup si hay mods faltantes/sobrantes
-        await checkMods()
-
-        // 4. Verificar Config
-        await checkConfig()
-
-        // 5. Config
-        await checkConfig()
-
-      } catch (error) {
-        console.error('Error en secuencia de inicio:', error)
-      }
-    }
-
-    // Pequeño delay para asegurar que la UI esté lista
     const timer = setTimeout(runStartupChecks, 500)
-
     return () => clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isRamLoading])
-
-  // ELIMINADO: Auto-refresh mods when blacklist changes
-  // El usuario solicitó no buscar automáticamente al cambiar settings.
-  // La verificación se hará al dar a "Jugar" o manualmente si añadimos un botón.
-
-  // Escuchar eventos de progreso de descarga de mods enviados por el main
-  useEffect(() => {
-    if (!window.api || !window.api.onModsDownloadProgress) return
-
-    const off = window.api.onModsDownloadProgress((data) => {
-      if (data.type === 'start') {
-        setDownloadingMod({ id: data.id, filename: data.filename })
-        // Calcular progreso base: (mods_completados / total) * 100
-        const current = data.current || 1
-        const total = data.total || 1
-        const baseProgress = ((current - 1) / total) * 100
-        setProgress(baseProgress)
-        setDownloadingItem(`Descargando ${data.filename} (${current}/${total})`)
-      } else if (data.type === 'progress') {
-        // Progreso fino: base + (porcentaje_actual / total)
-        const current = data.current || 1
-        const total = data.total || 1
-        const baseProgress = ((current - 1) / total) * 100
-        const fileProgress = (data.percent || 0) / total
-        setProgress(Math.min(99, baseProgress + fileProgress))
-      } else if (data.type === 'complete') {
-        if (data.ok) {
-          // Si es el último, 100%, si no, calcular base del siguiente
-          const current = data.current || 1
-          const total = data.total || 1
-          const progress = (current / total) * 100
-          setProgress(progress)
-        } else {
-          console.error('Download failed for', data.filename, data.error)
-          // Extraer solo el primer error para evitar mensajes repetitivos
-          const errorMsg = data.error?.split(',')[0]?.trim() || 'Error desconocido'
-          toast.error(`Error al descargar ${data.filename}: ${errorMsg}`)
-        }
-      } else if (data.type === 'delete-start') {
-        setDownloadingMod({ id: data.id, filename: data.filename })
-        setDownloadingItem('Borrando antiguo: ' + data.filename)
-        setProgress(0)
-      } else if (data.type === 'delete-complete') {
-        setProgress(10)
-        if (!data.ok) console.error('Delete failed', data.filename, data.error)
-      } else if (data.type === 'done') {
-        setIsDownloading(false)
-        setDownloadingItem('')
-        setDownloadingMod(null)
-        setTimeout(() => setProgress(0), 1200)
-      }
-    })
-
-    return () => {
-      if (typeof off === 'function') off()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [runStartupChecks])
 
   // Escuchar eventos de actualización de configuración
   useEffect(() => {
@@ -262,6 +108,7 @@ function App() {
       } else if (data.type === 'done') {
         setIsConfigUpdating(false)
         setShowConfigPopup(false)
+        setConfigUpdateCancelled(false)
         toast.success('Configuración actualizada correctamente')
       } else if (data.type === 'error') {
         setIsConfigUpdating(false)
@@ -272,19 +119,16 @@ function App() {
     return () => {
       if (typeof off === 'function') off()
     }
-  }, [toast])
+  }, [toast, setShowConfigPopup])
 
+  // Cargar configuración inicial
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        // 1. FALTABA await aquí
         const settings = await window.api.getSettings()
-
-        // 2. Primero obtener la RAM del sistema
         const systemRAM = await window.api.getSystemRAM()
         setMaxRAM(systemRAM)
 
-        // 3. Si hay settings guardados, cargarlos
         if (settings) {
           setRamAllocation(settings.ramAllocation || Math.min(12, systemRAM))
           setGraphicsLevel(settings.graphicsLevel || 'normal')
@@ -299,14 +143,12 @@ function App() {
             }
           )
         } else {
-          // Si no hay settings, usar valores por defecto
           const defaultRAM = Math.min(12, systemRAM)
           setRamAllocation(defaultRAM)
         }
       } catch (error) {
         console.error('Error al cargar configuración:', error)
-        // En caso de error, establecer valores por defecto
-        const systemRAM = 16 // Fallback
+        const systemRAM = 16
         setMaxRAM(systemRAM)
         setRamAllocation(Math.min(12, systemRAM))
       } finally {
@@ -334,7 +176,7 @@ function App() {
         if (forgeStatus === 'exact' || forgeStatus === 'acceptable') {
           window.api.updateLauncherProfile(ramAllocation)
         }
-      }, 500) // Esperar 500ms antes de guardar
+      }, 500)
 
       return () => clearTimeout(timeoutId)
     }
@@ -350,12 +192,10 @@ function App() {
   ])
 
   const handleDownloadJava = async () => {
-    // Usar API segura expuesta por preload
     try {
       await window.api.openExternal('https://www.java.com/es/download/manual.jsp')
     } catch (e) {
       console.error('openExternal failed', e)
-      // Fallback: abrir en nueva ventana (puede bloquearse)
       window.open('https://www.java.com/es/download/manual.jsp', '_blank')
     }
     setShowJavaPopup(false)
@@ -371,70 +211,8 @@ function App() {
     setShowForgePopup(false)
   }
 
-  const getModsToProcess = useCallback((modsStatus, includeAll = true) => {
-    if (!modsStatus) return []
-    const { missing = [], modified = [], outdated = [], corrupted = [], unused = [] } = modsStatus
-    return includeAll
-      ? [...missing, ...modified, ...outdated, ...corrupted, ...unused]
-      : [...outdated, ...corrupted, ...unused]
-  }, [])
-  const prepareModsPayload = useCallback((mods, cleanInstall = false) => {
-    return mods.map((m) => ({
-      id: m.id,
-      filename: m.filename,
-      oldFilename: cleanInstall ? null : m.installedFilename || null,
-      installType: m.installType || 'mods'
-    }))
-  }, [])
-
-  const handleModsDownload = async (updateOnly = false) => {
-    const toProcess = getModsToProcess(modsStatus, !updateOnly)
-    if (toProcess.length === 0) {
-      setShowModsPopup(false)
-      return
-    }
-
-    // Separar mods a eliminar de los que se van a descargar
-    const itemsToDelete = toProcess.filter((m) => m.reason === 'disabled_in_settings')
-    const itemsToDownload = toProcess.filter((m) => m.reason !== 'disabled_in_settings')
-
-    const payload = prepareModsPayload(itemsToDownload)
-    // Para los items a borrar, necesitamos pasar el objeto completo o al menos path/id/filename
-    const deletePayload = itemsToDelete.map((m) => ({
-      id: m.id,
-      filename: m.filename,
-      path: m.path,
-      installType: m.installType
-    }))
-
-    setShowModsPopup(false)
-    setIsDownloading(true)
-    setDownloadingItem(updateOnly ? 'Actualizando mods' : 'Sincronizando mods')
-
-    try {
-      await window.api.updateMods(MODS_SHARE, payload, deletePayload)
-
-      // Verificación post-descarga
-      // Esperar un momento para asegurar que el sistema de archivos se actualice
-      setTimeout(async () => {
-        console.log('Verificando mods tras descarga...')
-        const newStatus = await checkMods()
-        if (countModsNeedingDownload(newStatus) === 0) {
-          toast.success('Todos los mods están sincronizados correctamente')
-        } else {
-          toast.warning('Algunos mods aún requieren atención')
-        }
-      }, 1000)
-    } catch (error) {
-      console.error('Error downloading/updating mods:', error)
-      toast.error('Error al descargar/actualizar mods')
-      setIsDownloading(false)
-      setDownloadingMod(null)
-    }
-  }
-
-  const handleDownloadMods = () => handleModsDownload(false)
   const handleUpdateMods = () => handleModsDownload(true)
+  const handleDownloadMods = () => handleModsDownload(false)
 
   const handleRepairInstallation = async () => {
     try {
@@ -443,21 +221,16 @@ function App() {
       setProgress(0)
       setShowRepairPopup(false)
 
-      // 1. Ejecutar limpieza en backend
       await window.api.repairInstallation()
-
-      // 2. Verificar estado (Forge y Mods)
-      // Esto mostrará el popup de Forge si falta
       await checkForgeVersion()
 
-      // Obtener estado actualizado de mods (deberían faltar todos)
       const modsInfo = await checkMods()
 
       if (modsInfo) {
         const toProcess = getModsToProcess(modsInfo)
         if (toProcess.length > 0) {
           setDownloadingItem('Descargando mods...')
-          const payload = prepareModsPayload(toProcess, true) // Instalación limpia
+          const payload = prepareModsPayload(toProcess, true)
           await window.api.updateMods(MODS_SHARE, payload)
         }
       }
@@ -484,29 +257,31 @@ function App() {
     }
   }
 
+  const handleCancelConfigUpdate = () => {
+    setConfigUpdateCancelled(true)
+    setShowConfigPopup(false)
+    toast.info('Actualización cancelada. Se volverá a solicitar al reiniciar la app.')
+  }
+
   const handlePlay = async () => {
-    // Verificar Java
     const info = await checkJava()
     if (!info.installed || !info.compatible) {
       setShowJavaPopup(true)
       return
     }
 
-    // Verificar Forge
     const forgeInfo = await checkForgeVersion()
     if (!forgeInfo.compatible) {
       setShowForgePopup(true)
       return
     }
 
-    // Verificar Mods
     const modsInfo = await checkMods()
     if (countModsNeedingDownload(modsInfo) > 0) {
       setShowModsPopup(true)
       return
     }
 
-    // Todo OK - iniciar juego
     toast.success('¡Todo listo! Iniciando Minecraft...')
     setTimeout(() => {
       window.api.exitApp()
@@ -652,8 +427,9 @@ function App() {
         handleRepair={handleRepairInstallation}
       />
       <ConfigUpdatePopup
-        show={showConfigPopup}
+        show={showConfigPopup && !configUpdateCancelled}
         onUpdate={handleConfigUpdate}
+        onCancel={handleCancelConfigUpdate}
         isUpdating={isConfigUpdating}
       />
       <ToastContainer />

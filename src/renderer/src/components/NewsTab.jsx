@@ -1,3 +1,4 @@
+import { Newspaper } from 'lucide-react'
 import PropTypes from 'prop-types'
 
 NewsTab.propTypes = {
@@ -7,7 +8,9 @@ NewsTab.propTypes = {
 function NewsTab({ news }) {
   return (
     <div className="max-w-4xl mx-auto space-y-4">
-      <h2 className="text-3xl font-bold mb-6">Noticias y Actualizaciones</h2>
+      <h2 className="flex items-center text-3xl font-bold mb-6">
+        <Newspaper size={24} className="mr-2" />
+        Noticias y Actualizaciones</h2>
       {news.map((item) => (
         <div
           key={item.id}

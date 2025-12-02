@@ -10,9 +10,14 @@ import {
   Heart,
   MapPin,
   XCircle,
-  Loader
+  Loader,
+  Info,
+  PlayCircle,
+  BadgeInfo
 } from 'lucide-react'
 import ModsStatus from './ModsStatus'
+import Credits from './Credits'
+import { CREDITS } from '../../../config'
 
 InfoTab.propTypes = {
   modsStatus: PropTypes.object,
@@ -89,7 +94,10 @@ function InfoTab({ modsStatus, modBlacklist, updateBlacklist, onRefreshMods, onT
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <h2 className="text-3xl font-bold mb-6">Información del Servidor</h2>
+      <h2 className="flex items-center text-3xl font-bold mb-6">
+        <Info size={24} className="mr-2" />
+        Información del Servidor
+      </h2>
 
       {/* Server Status Card */}
       <div className="bg-linear-to-r from-blue-900/30 to-cyan-900/30 rounded-xl p-6 border border-blue-700/50">
@@ -138,7 +146,7 @@ function InfoTab({ modsStatus, modBlacklist, updateBlacklist, onRefreshMods, onT
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <Signal className="text-yellow-400" size={24} />
+              <Signal className="text-green-400" size={24} />
               <div>
                 <p className="text-xs text-gray-400">Latencia</p>
                 <p className="font-bold text-green-400">{serverStatus?.online ? 'Buena' : 'N/A'}</p>
@@ -149,53 +157,53 @@ function InfoTab({ modsStatus, modBlacklist, updateBlacklist, onRefreshMods, onT
       </div>
 
       {/* Server Details */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-          <h3 className="text-xl font-bold mb-4 text-blue-400">Detalles del Servidor</h3>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-gray-400">IP del Servidor:</span>
-              <span className="font-mono text-cyan-400">{SERVER_IP}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Puerto:</span>
-              <span className="font-mono text-cyan-400">{SERVER_PORT}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Versión:</span>
-              <span className="font-mono text-purple-400">{serverStatus?.version || '1.20.1'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">MOTD:</span>
-              <span className="font-mono text-green-400 text-sm">
-                {serverStatus?.motd || 'SoulCraft'}
-              </span>
-            </div>
+      <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
+        <h3 className="text-xl font-bold mb-4 text-blue-400 flex items-center">
+          <Server size={24} className="mr-2" />
+          Detalles del Servidor
+        </h3>
+        <div className="space-y-3">
+          <div className="flex justify-between">
+            <span className="text-gray-400">IP del Servidor:</span>
+            <span className="font-mono text-cyan-400">{SERVER_IP}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-400">Puerto:</span>
+            <span className="font-mono text-cyan-400">{SERVER_PORT}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-400">Versión:</span>
+            <span className="font-mono text-purple-400">{serverStatus?.version || '1.20.1'}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-400">MOTD:</span>
+            <span className="font-mono text-green-400 text-sm">
+              {serverStatus?.motd || 'SoulCraft'}
+            </span>
           </div>
         </div>
+      </div>
 
-        <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-          <h3 className="text-xl font-bold mb-4 text-green-400">Cómo Conectarse</h3>
-          <div className="space-y-3">
-            <p className="text-sm text-gray-300">
-              Jugar en nuestro servidor es extremadamente fácil
-            </p>
-            <p className="text-sm text-gray-300">
-              Solamente tendrás que pulsar el botón de jugar dentro del launcher
-            </p>
-            <div className="mt-4 p-3 bg-gray-900/50 rounded border border-gray-700">
-              <p className="text-xs text-gray-400 mb-1">Comando directo:</p>
-              <code className="text-cyan-400 text-sm">
-                /connect {SERVER_IP}:{SERVER_PORT}
-              </code>
-            </div>
-          </div>
+      <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
+        <h3 className="text-xl font-bold mb-4 text-green-400 flex items-center">
+          <PlayCircle size={24} className="mr-2" />
+          Cómo jugar
+        </h3>
+        <div className="space-y-3">
+          <p className="text-sm text-gray-300">Jugar en nuestro servidor es extremadamente fácil</p>
+          <p className="text-sm text-gray-300">
+            gracias a la funcionalidad del launcher, al iniciar el juego, solo tendras que pulsar el
+            boton de jugar
+          </p>
         </div>
       </div>
 
       {/* Server Features */}
       <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-        <h3 className="text-xl font-bold mb-4 text-cyan-400">Características del Servidor</h3>
+        <h3 className="text-xl font-bold mb-4 text-cyan-400 flex items-center">
+          <BadgeInfo size={24} className="mr-2" />
+          Características del Servidor
+        </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {serverFeatures.map((feature, index) => (
             <div
@@ -233,6 +241,9 @@ function InfoTab({ modsStatus, modBlacklist, updateBlacklist, onRefreshMods, onT
           onToast={onToast}
         />
       </div>
+
+      {/* Credits */}
+      <Credits credits={CREDITS} />
     </div>
   )
 }

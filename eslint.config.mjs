@@ -6,6 +6,13 @@ import eslintPluginReactRefresh from 'eslint-plugin-react-refresh'
 
 export default [
   { ignores: ['**/node_modules', '**/dist', '**/out'] },
+  {
+    languageOptions: {
+      globals: {
+        __APP_VERSION__: 'readonly'
+      }
+    }
+  },
   eslint,
   eslintPluginReact.configs.flat.recommended,
   eslintPluginReact.configs.flat['jsx-runtime'],

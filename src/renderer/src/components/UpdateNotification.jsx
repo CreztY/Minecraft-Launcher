@@ -11,8 +11,12 @@ function UpdateNotification({ onToast }) {
   useEffect(() => {
     if (!window.api) return
 
-    // Check for updates on mount
+    // Check for updates on mount ONLY ONCE
     window.api.checkForUpdates()
+  }, [])
+
+  useEffect(() => {
+    if (!window.api) return
 
     // Listen for update events
     const removeListener = window.api.onUpdateStatus((data) => {
