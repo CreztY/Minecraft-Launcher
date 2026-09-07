@@ -333,18 +333,20 @@ function App() {
                   news={news}
                   installedMods={modsStatus?.totalInstalled || 'N/A'}
                 />
-                {modsStatus && (
-                  <ModsProgress
-                    isDownloading={isDownloading}
-                    modsStatus={modsStatus}
-                    progress={progress}
-                    downloadingMod={downloadingMod}
-                    modBlacklist={modBlacklist}
-                    updateBlacklist={setModBlacklist}
-                    onRefreshMods={checkMods}
-                    onToast={toast}
-                  />
-                )}
+                <div className="max-w-4xl mx-auto space-y-6">
+                  {modsStatus && (
+                    <ModsProgress
+                      isDownloading={isDownloading}
+                      modsStatus={modsStatus}
+                      progress={progress}
+                      downloadingMod={downloadingMod}
+                      modBlacklist={modBlacklist}
+                      updateBlacklist={setModBlacklist}
+                      onRefreshMods={checkMods}
+                      onToast={toast}
+                    />
+                  )}
+                </div>
               </motion.div>
             )}
             {activeTab === 'news' && (

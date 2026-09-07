@@ -2,13 +2,21 @@ import {
   RECOMMENDED_MODS,
   OPTIONAL_MODS,
   AVAILABLE_SHADERS,
+  SHADER_TYPES,
   SHADER_PRESETS,
   GRAPHICS_LEVEL_MODS
 } from './mods-data.js'
 import CreztYImage from '../renderer/src/assets/crezty.png'
 import zmeyniImage from '../renderer/src/assets/zmeyni.png'
 
-export { RECOMMENDED_MODS, OPTIONAL_MODS, AVAILABLE_SHADERS, SHADER_PRESETS, GRAPHICS_LEVEL_MODS }
+export {
+  RECOMMENDED_MODS,
+  OPTIONAL_MODS,
+  AVAILABLE_SHADERS,
+  SHADER_TYPES,
+  SHADER_PRESETS,
+  GRAPHICS_LEVEL_MODS
+}
 
 export const MODS_SHARE = 'https://cloud.crezty.com/index.php/s/WGFJgMTYRRMBFSB'
 
@@ -27,7 +35,7 @@ export const NEWS = [
     title: 'Lanzamiento del launcher v1.0.4',
     date: '2025-12-02',
     content: 'El launcher ya esta listo para los usuarios, disfruta de la experiencia.'
-  },
+  }
 ]
 
 export const CREDITS = [
@@ -62,5 +70,6 @@ export default {
   RECOMMENDED_MODS,
   OPTIONAL_MODS,
   AVAILABLE_SHADERS,
-  SHADER_PRESETS
+  SHADER_PRESETS,
+  SHADER_TYPES
 }

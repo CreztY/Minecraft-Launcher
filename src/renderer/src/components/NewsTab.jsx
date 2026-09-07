@@ -10,7 +10,8 @@ function NewsTab({ news }) {
     <div className="max-w-4xl mx-auto space-y-4">
       <h2 className="flex items-center text-3xl font-bold mb-6">
         <Newspaper size={24} className="mr-2" />
-        Noticias y Actualizaciones</h2>
+        Noticias y Actualizaciones
+      </h2>
       {news.map((item) => (
         <div
           key={item.id}

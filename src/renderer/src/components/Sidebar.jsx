@@ -45,8 +45,8 @@ function Sidebar({
               whileHover={{ scale: 1.02, x: 5 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setActiveTab(item.id)}
-              className={`w-full px-4 py-3 rounded-lg text-left transition-colors relative ${activeTab === item.id ? 'text-white' : 'hover:bg-gray-800 text-gray-300'
-                }`}
+              className={`w-full px-4 py-3 rounded-lg text-left transition-colors relative
+                ${activeTab === item.id ? 'text-white' : 'hover:bg-gray-800 text-gray-300'}`}
             >
               {activeTab === item.id && (
                 <motion.div

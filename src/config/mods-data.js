@@ -1529,7 +1529,7 @@ export const RECOMMENDED_MODS = [
     name: 'Legendary Tooltips',
     filename: 'LegendaryTooltips-1.20.1-forge-1.4.5.jar',
     version: '1.4.5',
-    latestVersion: '1.4.5',
+    latestVersion: '1.4.4',
     hash: '15521ab414b92f60e75bdd49724eb65bb6aa8b3d6f72c157cc261011d58d625e',
     description: 'Cambia el formato de los tooltips para que sean más bonitos.'
   },
@@ -1538,7 +1538,7 @@ export const RECOMMENDED_MODS = [
     name: 'Eclectic Trove',
     filename: 'EclecticTrove-1.20.1-1.3.0.zip',
     version: '1.3.0',
-    latestVersion: '1.3.0',
+    latestVersion: '1.2.0',
     hash: '6f7b33c0339094c8038ed1c00a51d72fd454ae552974b5f8f632d0a6318903eb',
     description: 'Un mod que añade una variedad de trovas y objetos únicos al mundo.'
   },
@@ -1547,6 +1547,7 @@ export const RECOMMENDED_MODS = [
     name: 'Ambient Sounds',
     filename: 'AmbientSounds_FORGE_v6.1.11_mc1.20.1.jar',
     version: '6.1.11',
+    latestVersion: '6.1.10',
     hash: '5ad6423578f482606eadb1a1a74cd86d74f2c11ac544d8a9a977fc58c8334b25',
     description: 'Un mod que añade sonidos ambientales al mundo.'
   },
@@ -1555,7 +1556,8 @@ export const RECOMMENDED_MODS = [
     name: 'Open Parties and Claims',
     filename: 'open-parties-and-claims-forge-1.20.1-0.25.8.jar',
     version: '0.25.8',
-    hash: '6E286BDB3E85C8AD7A5D15756EFD5822E371D41C5FF1403B5CEC70118D0F283C',
+    latestVersion: '0.25.7',
+    hash: '6e286bdb3e85c8ad7a5d15756efd5822e371d41c5ff1403b5cec70118d0f283c',
     description: 'Un mod que añade protección a los reinos.'
   },
   {
@@ -1563,8 +1565,27 @@ export const RECOMMENDED_MODS = [
     name: 'TrashSlot',
     filename: 'trashslot-forge-1.20-15.1.2.jar',
     version: '15.1.2',
-    hash: '9CC15728F84A0AF0BE0EFA537CF897C0D98F3C706EB5DD5264C9CD58DC322411',
+    latestVersion: '15.1.1',
+    hash: '9cc15728f84a0af0be0efa537cf897c0d98f3c706eb5dd5264c9cd58dc322411',
     description: 'Un mod que añade una papelera al inventario.'
+  },
+  {
+    id: 'alltheleaks',
+    name: 'All The Leaks',
+    filename: 'alltheleaks-1.1.1+1.20.1-forge.jar',
+    version: '1.1.1',
+    latestVersion: '1.1.1',
+    hash: '7B8E945DA294B745E6AED9F88F28E232A767E032D7C2B8137A8EF36421D9FB33',
+    description: 'Este mod corrige fugas de memoria de algunos mods.'
+  },
+  {
+    id: 'customskinloader',
+    name: 'CustomSkinLoader',
+    filename: 'CustomSkinLoader_ForgeV2-14.26.1.jar',
+    version: '14.26.1',
+    latestVersion: '14.26.1',
+    hash: 'B3484B9254E1F409D1B1402D3AD7AC751833E22D9DC069017BBAA405760B77FC',
+    description: 'Un mod que corrige errores en las skins.'
   }
 ]
 
@@ -1605,74 +1626,171 @@ export const OPTIONAL_MODS = {
   ]
 }
 
-// Definición de Shaders disponibles
-export const AVAILABLE_SHADERS = {
-  oculus: {
-    id: 'oculus',
-    name: 'Oculus',
-    description: 'Mod de optimización y soporte para Shaders (fork de Iris).',
-    filename: 'oculus-mc1.20.1-1.8.0.jar',
-    version: '1.8.0',
-    hash: '0945df0cba0f62b3901dd80c3268e5311b770ece78c78037a45db12ac0425fef',
-    installType: 'mods'
+// Definición de Shaders disponibles - Oculus es requerido para todos
+export const OCULUS_MOD = {
+  id: 'oculus',
+  name: 'Oculus',
+  description: 'Mod de optimización y soporte para Shaders (fork de Iris).',
+  filename: 'oculus-mc1.20.1-1.8.0.jar',
+  version: '1.8.0',
+  hash: '0945df0cba0f62b3901dd80c3268e5311b770ece78c78037a45db12ac0425fef',
+  installType: 'mods'
+}
+
+// Tipos de shaders organizados por familia
+export const SHADER_TYPES = {
+  bliss: {
+    id: 'bliss',
+    name: 'Bliss Shaders',
+    description: 'Shader moderno con efectos atmosféricos avanzados y colores vibrantes',
+    icon: '✨',
+    variants: {
+      default: {
+        id: 'bliss_default',
+        name: 'Bliss Shaders',
+        description: 'Versión completa con todos los efectos',
+        filename: 'Bliss_v2.1.2_(Chocapic13_Shaders_edit).zip',
+        version: '2.1.2',
+        hash: 'F41DB92ACC585FE9FFE0CC124D6ECAEA27CEF9DED91129EBC2A8E60226947B2C',
+        installType: 'shaderpack',
+        performance: 'high'
+      }
+    }
   },
-  complementary_reimagined: {
-    id: 'complementary_reimagined',
-    name: 'Complementary Reimagined',
-    description: 'Shader equilibrado con estética vanilla mejorada y gran rendimiento.',
-    filename: 'ComplementaryReimagined_r5.6.1.zip',
-    version: '5.6.1',
-    hash: '33153747d25fbee470acb42ccf4f26b03cc551bb900d4c6d3389b5500dd84839',
-    installType: 'shaderpack'
+  bsl: {
+    id: 'bsl',
+    name: 'BSL Shaders',
+    description: 'Shader clásico y confiable con excelente rendimiento',
+    icon: '🌅',
+    variants: {
+      default: {
+        id: 'bsl_default',
+        name: 'BSL Shaders',
+        description: 'Shader equilibrado con buena calidad visual',
+        filename: 'BSL_v8.4.zip',
+        version: '8.4',
+        hash: 'F57821C6F0D744CA72B41D3AD9762452E53D5B0EB3A888C0636AD29B7D0D1548',
+        installType: 'shaderpack',
+        performance: 'medium'
+      }
+    }
   },
-  complementary_unbound: {
-    id: 'complementary_unbound',
-    name: 'Complementary Unbound',
-    description: 'Versión desbloqueada de Complementary para máximo realismo.',
-    filename: 'ComplementaryUnbound_r5.6.1.zip',
-    version: '5.6.1',
-    hash: '1c25b2b917ff6d0a511cf2edd8992e0bc66c950c401020f1b0362646bb3e2952',
-    installType: 'shaderpack'
+  solas: {
+    id: 'solas',
+    name: 'Solas Shader',
+    description: 'Shader cinematográfico con iluminación realista',
+    icon: '🎬',
+    variants: {
+      default: {
+        id: 'solas_default',
+        name: 'Solas Shader',
+        description: 'Iluminación cinematográfica y colores naturales',
+        filename: 'Solas Shader V3.1c.zip',
+        version: '3.1',
+        hash: '188D2B058210D3E4DF1F98C770DF3D7022FBA930F7C0CFC6CA4490EFB0BC2F88',
+        installType: 'shaderpack',
+        performance: 'high'
+      }
+    }
   },
-  sildurs_extreme: {
-    id: 'sildurs_extreme',
-    name: "Sildur's Vibrant Shaders Extreme",
-    description: 'Shader de alto rendimiento con iluminación volumétrica intensa.',
-    filename: "Sildur's Vibrant Shaders v1.51 Extreme.zip",
-    version: '1.51',
-    hash: 'bcc62a6d8ea621b03ff7f6166031d8a343e7a869ff97941ca9d9bbf091ec3ca9',
-    installType: 'shaderpack'
+  complementary: {
+    id: 'complementary',
+    name: 'Complementary Shaders',
+    description: 'Shaders versátiles con dos estilos distintos',
+    icon: '🎨',
+    variants: {
+      unbound: {
+        id: 'complementary_unbound',
+        name: 'Complementary Unbound',
+        description: 'Versión desbloqueada para máximo realismo y efectos avanzados',
+        filename: 'ComplementaryUnbound_r5.6.1.zip',
+        version: '5.6.1',
+        hash: '1c25b2b917ff6d0a511cf2edd8992e0bc66c950c401020f1b0362646bb3e2952',
+        installType: 'shaderpack',
+        performance: 'high'
+      },
+      reimagined: {
+        id: 'complementary_reimagined',
+        name: 'Complementary Reimagined',
+        description: 'Estética vanilla mejorada con gran rendimiento',
+        filename: 'ComplementaryReimagined_r5.6.1.zip',
+        version: '5.6.1',
+        hash: '33153747d25fbee470acb42ccf4f26b03cc551bb900d4c6d3389b5500dd84839',
+        installType: 'shaderpack',
+        performance: 'medium'
+      }
+    }
   },
-  sildurs_high: {
-    id: 'sildurs_high',
-    name: "Sildur's Vibrant Shaders High",
-    description: 'Versión alta de Sildurs, buen balance visual.',
-    filename: "Sildur's Vibrant Shaders v1.51 High.zip",
-    version: '1.51',
-    hash: 'fd1076dd84a32341a24b859e0d279e6ef276da3908cfaaa31b6b50971e63ed8a',
-    installType: 'shaderpack'
-  },
-  sildurs_medium: {
-    id: 'sildurs_medium',
-    name: "Sildur's Vibrant Shaders Medium",
-    description: 'Versión media de Sildurs, para gráficas de gama media.',
-    filename: "Sildur's Vibrant Shaders v1.51 Medium.zip",
-    version: '1.51',
-    hash: 'c49919ac6c519ebce807b12620238911a795c92eaed48cd6c47bae8b2a5a47f5',
-    installType: 'shaderpack'
-  },
-  sildurs_lite: {
-    id: 'sildurs_lite',
-    name: "Sildur's Vibrant Shaders Lite",
-    description: 'Versión ligera de Sildurs, ideal para PCs de bajos recursos.',
-    filename: "Sildur's Vibrant Shaders v1.51 Lite.zip",
-    version: '1.51',
-    hash: '28c8873dd557e6295c4d745eb676b145f1039c173dba26e2db9a159b003a84bd',
-    installType: 'shaderpack'
+  sildurs: {
+    id: 'sildurs',
+    name: "Sildur's Vibrant Shaders",
+    description: 'Shaders vibrantes con múltiples niveles de rendimiento',
+    icon: '🌈',
+    variants: {
+      extreme: {
+        id: 'sildurs_extreme',
+        name: 'Extreme',
+        description: 'Máxima calidad con iluminación volumétrica intensa (requiere GPU potente)',
+        filename: "Sildur's Vibrant Shaders v1.51 Extreme.zip",
+        version: '1.51',
+        hash: 'bcc62a6d8ea621b03ff7f6166031d8a343e7a869ff97941ca9d9bbf091ec3ca9',
+        installType: 'shaderpack',
+        performance: 'extreme',
+        recommended: 'RTX 3070+ / RX 6800+'
+      },
+      high: {
+        id: 'sildurs_high',
+        name: 'High',
+        description: 'Alta calidad con buen balance visual y rendimiento',
+        filename: "Sildur's Vibrant Shaders v1.51 High.zip",
+        version: '1.51',
+        hash: 'fd1076dd84a32341a24b859e0d279e6ef276da3908cfaaa31b6b50971e63ed8a',
+        installType: 'shaderpack',
+        performance: 'high',
+        recommended: 'RTX 2060 / GTX 1080'
+      },
+      medium: {
+        id: 'sildurs_medium',
+        name: 'Medium',
+        description: 'Calidad media ideal para gráficas de gama media',
+        filename: "Sildur's Vibrant Shaders v1.51 Medium.zip",
+        version: '1.51',
+        hash: 'c49919ac6c519ebce807b12620238911a795c92eaed48cd6c47bae8b2a5a47f5',
+        installType: 'shaderpack',
+        performance: 'medium',
+        recommended: 'GTX 1060 / RX 580'
+      },
+      lite: {
+        id: 'sildurs_lite',
+        name: 'Lite',
+        description: 'Versión ligera para PCs de bajos recursos',
+        filename: "Sildur's Vibrant Shaders v1.51 Lite.zip",
+        version: '1.51',
+        hash: '28c8873dd557e6295c4d745eb676b145f1039c173dba26e2db9a159b003a84bd',
+        installType: 'shaderpack',
+        performance: 'low',
+        recommended: 'Intel Iris Xe / Vega 7-8'
+      }
+    }
   }
 }
 
-// Presets de Shaders según calidad
+// Legacy: Mantener compatibilidad con código existente
+export const AVAILABLE_SHADERS = {
+  oculus: OCULUS_MOD,
+  // Flatten all variants for backward compatibility
+  bliss_default: SHADER_TYPES.bliss.variants.default,
+  bsl_default: SHADER_TYPES.bsl.variants.default,
+  solas_default: SHADER_TYPES.solas.variants.default,
+  complementary_unbound: SHADER_TYPES.complementary.variants.unbound,
+  complementary_reimagined: SHADER_TYPES.complementary.variants.reimagined,
+  sildurs_extreme: SHADER_TYPES.sildurs.variants.extreme,
+  sildurs_high: SHADER_TYPES.sildurs.variants.high,
+  sildurs_medium: SHADER_TYPES.sildurs.variants.medium,
+  sildurs_lite: SHADER_TYPES.sildurs.variants.lite
+}
+
+// Presets de Shaders según calidad (legacy - mantener para compatibilidad)
 export const SHADER_PRESETS = {
   ultra: {
     name: 'Ultra (RTX 3060+ / RX 6700+)',
@@ -1701,15 +1819,6 @@ export const GRAPHICS_LEVEL_MODS = {
   normal: [], // Sin mods adicionales
   basic: [
     {
-      id: 'modelgapfix',
-      name: 'Model Gap Fix',
-      description: 'Arregla los huecos entre los modelos.',
-      filename: 'modelfix-1.15.jar',
-      version: '1.15',
-      hash: '35f27982242a3ea58c526204a28704ddf355d19bb2e9b0ff10f9585c255a4f16',
-      installType: 'mods'
-    },
-    {
       id: 'darkpaintings',
       name: 'Dark Paintings',
       description: 'Añade más cuadros al juego.',
@@ -1717,37 +1826,9 @@ export const GRAPHICS_LEVEL_MODS = {
       version: '17.0.5',
       hash: 'c8ee8d3625dae258e97d773925aca9d882ffce08bddc964821a6cea30bfe1079',
       installType: 'mods'
-    },
-    {
-      id: 'betteranimationscollection',
-      name: 'Better Animations Collection',
-      filename: 'BetterAnimationsCollection-v8.0.1-1.20.1-Forge.jar',
-      version: '8.0.1',
-      latestVersion: '8.0.1',
-      hash: '135f30e16ca17eda6521d1427530046aa3bb489966c3f6fffba7a7d23c7f4c64',
-      description: 'Mejora las animaciones del juego.'
-    },
-    {
-      id: 'notenoughanimations',
-      filename: 'notenoughanimations-forge-1.10.6-mc1.20.1.jar',
-      name: 'Not Enough Animations',
-      description: 'Mejora las animaciones del juego.',
-      version: '1.10.6',
-      latestVersion: '1.10.6',
-      hash: '6f9d7a22e49357183ea2125c83cd8eb87ce3033b8eaa307b0cd3dacbfb954b5a',
-      installType: 'mods'
     }
   ],
   high: [
-    {
-      id: 'modelgapfix',
-      name: 'Model Gap Fix',
-      description: 'Arregla los huecos entre los modelos.',
-      filename: 'modelfix-1.15.jar',
-      version: '1.15',
-      hash: '35f27982242a3ea58c526204a28704ddf355d19bb2e9b0ff10f9585c255a4f16',
-      installType: 'mods'
-    },
     {
       id: 'darkpaintings',
       name: 'Dark Paintings',
@@ -1767,16 +1848,6 @@ export const GRAPHICS_LEVEL_MODS = {
       installType: 'mods'
     },
     {
-      id: 'betteranimationscollection',
-      name: 'Better Animations Collection',
-      filename: 'BetterAnimationsCollection-v8.0.1-1.20.1-Forge.jar',
-      version: '8.0.1',
-      latestVersion: '8.0.1',
-      hash: '135f30e16ca17eda6521d1427530046aa3bb489966c3f6fffba7a7d23c7f4c64',
-      description: 'Mejora las animaciones del juego.',
-      installType: 'mods'
-    },
-    {
       id: 'DistantHorizons',
       filename: 'DistantHorizons-2.3.6-b-1.20.1-fabric-forge.jar',
       name: 'Distant Horizons',
@@ -1786,18 +1857,6 @@ export const GRAPHICS_LEVEL_MODS = {
       latestVersion: '2.3.6-b',
       hash: '65c20588ef3cedd770e96f0f1c015841418a043811690455b33d5ebd8a8e137d',
       installType: 'mods'
-    },
-    {
-      id: 'notenoughanimations',
-      filename: 'notenoughanimations-forge-1.10.6-mc1.20.1.jar',
-      name: 'Not Enough Animations',
-      description: 'Mejora las animaciones del juego.',
-      version: '1.10.6',
-      latestVersion: '1.10.6',
-      hash: '6f9d7a22e49357183ea2125c83cd8eb87ce3033b8eaa307b0cd3dacbfb954b5a',
-      installType: 'mods'
     }
   ]
 }
-
-

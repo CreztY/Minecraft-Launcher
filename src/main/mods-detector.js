@@ -16,7 +16,7 @@ import { getMinecraftPath, getPathForInstallType } from './utils/paths.js'
 function calculateFileHash(filePath) {
   try {
     const fileBuffer = readFileSync(filePath)
-    return crypto.createHash('sha256').update(fileBuffer).digest('hex')
+    return crypto.createHash('sha256').update(fileBuffer).digest('hex').toLowerCase()
   } catch (e) {
     console.error(`Error calculating hash for ${filePath}:`, e.message)
     return null
@@ -63,14 +63,26 @@ function getRecommendedMods(settings = {}) {
     }
   })
 
-  // Añadir shaders según preset si están habilitados
-  if (optionalMods.shaders && SHADER_PRESETS[shaderPreset]) {
-    const presetShaders = SHADER_PRESETS[shaderPreset].shaders
-    presetShaders.forEach((shaderId) => {
-      if (AVAILABLE_SHADERS[shaderId]) {
-        mods.push(AVAILABLE_SHADERS[shaderId])
-      }
-    })
+  // Añadir shaders según selección si están habilitados
+  if (optionalMods.shaders) {
+    // Siempre añadir Oculus (dependencia requerida para shaders)
+    if (AVAILABLE_SHADERS.oculus) {
+      mods.push(AVAILABLE_SHADERS.oculus)
+    }
+
+    // Si shaderPreset es un ID directo de shader (nuevo sistema)
+    if (shaderPreset && AVAILABLE_SHADERS[shaderPreset]) {
+      mods.push(AVAILABLE_SHADERS[shaderPreset])
+    }
+    // Fallback: Si es un preset antiguo (ultra, high, etc)
+    else if (SHADER_PRESETS[shaderPreset]) {
+      const presetShaders = SHADER_PRESETS[shaderPreset].shaders
+      presetShaders.forEach((shaderId) => {
+        if (AVAILABLE_SHADERS[shaderId]) {
+          mods.push(AVAILABLE_SHADERS[shaderId])
+        }
+      })
+    }
   }
 
   // Añadir mods según nivel gráfico
@@ -156,9 +168,9 @@ function verifyMod(mod, targetDir, installedFiles) {
       path: modPath
     }
 
-    if (expectedHash && fileHash && expectedHash !== fileHash) {
+    if (expectedHash && fileHash && expectedHash.toLowerCase() !== fileHash) {
       status = 'corrupted'
-      details.expectedHash = expectedHash
+      details.expectedHash = expectedHash.toLowerCase()
     } else {
       status = 'installed'
       if (mod.version) {
@@ -187,9 +199,9 @@ function verifyMod(mod, targetDir, installedFiles) {
         path: variantPath
       }
 
-      if (expectedHash && fileHash && expectedHash !== fileHash) {
+      if (expectedHash && fileHash && expectedHash.toLowerCase() !== fileHash) {
         status = 'corrupted' // Variant found but hash mismatch (might be different version)
-        details.expectedHash = expectedHash
+        details.expectedHash = expectedHash.toLowerCase()
       } else if (
         mod.version &&
         installedVersion &&

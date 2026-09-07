@@ -1,6 +1,6 @@
 {
   "name": "crezty-minecraft-launcher",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Una aplicación para descargar mods y jugar Minecraft.",
   "main": "./out/main/index.js",
   "author": "crezty",
